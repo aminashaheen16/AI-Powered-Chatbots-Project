@@ -3,3 +3,4 @@ python-dotenv
 neo4j
 fastapi
 uvicorn
+pandas

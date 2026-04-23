@@ -52,3 +52,11 @@ System design with Memory and Evaluation nodes is detailed in [architecture.md](
 
 ## 📝 Project Report
 Full details on implementation, evaluation metrics, and API design are in [Project_Report.md](./Project_Report.md).
+
+### 3. Website Interface (Streamlit)
+A premium, ChatGPT-like web interface is now available.
+- **Features**: Sidebar session management, New Chat, Delete History, and real-time Evaluation badges.
+- **Run**:
+  ```bash
+  streamlit run app.py
+  ```
