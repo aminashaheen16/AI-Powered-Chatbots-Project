@@ -25,23 +25,24 @@ def query_db(sql):
     except Exception as e:
         return {"error": str(e)}
 
-def get_stats():
-    res = query_db("SELECT COUNT(*) FROM Assets")
-    total = res['data'][0][0] if not res.get('error') else 0
-    return total
-
-# --- AI CORE WITH MEMORY ---
+# --- AI CORE WITH INTENT TAGGING ---
 def nex_ai_core(user_input, history):
-    decision_prompt = f"Does this need inventory data? User: '{user_input}'. Respond in JSON: {{\"sql_needed\": true/false}}"
+    # Mapping intents like in the reference image
+    decision_prompt = f"""
+    Analyze the request: '{user_input}'.
+    Categorize into one: 'ADD' (insert data), 'INQUIRE' (ask/query), 'EDIT' (update), 'DELETE' (remove), or 'CHAT' (general talk).
+    Respond in JSON: {{"intent": "ADD"|"INQUIRE"|"EDIT"|"DELETE"|"CHAT", "needs_sql": true/false}}
+    """
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "system", "content": "You are a JSON classifier."}, {"role": "user", "content": decision_prompt}],
         response_format={"type": "json_object"}
     )
     decision = json.loads(response.choices[0].message.content)
+    intent = decision.get("intent", "CHAT")
     
-    if decision.get("sql_needed"):
-        sql_prompt = f"Generate SQLite for: '{user_input}'. Table: Assets (name, quantity, status). Output ONLY raw SQL."
+    if decision.get("needs_sql"):
+        sql_prompt = f"Generate SQLite for: '{user_input}'. Table: Assets (name, quantity, status). Respond ONLY with SQL."
         sql_res = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "system", "content": "Output ONLY raw SQL."}, {"role": "user", "content": sql_prompt}]
@@ -50,81 +51,89 @@ def nex_ai_core(user_input, history):
         sql_res = sql_res.replace("```sql", "").replace("```", "").strip()
         db_res = query_db(sql_res)
         
-        final_prompt = f"Summarize these results: {db_res} for the user. User asked: {user_input}"
-        messages = [{"role": "system", "content": "You are NEXUS, an inventory expert."}]
+        final_prompt = f"Summarize inventory data: {db_res} for user request: {user_input}"
+        messages = [{"role": "system", "content": "You are NEXUS, an inventory manager."}]
         messages.extend(history[-6:])
         messages.append({"role": "user", "content": final_prompt})
     else:
-        messages = [{"role": "system", "content": "You are NEXUS, a friendly AI assistant with memory."}]
+        messages = [{"role": "system", "content": "You are NEXUS, a friendly assistant."}]
         messages.extend(history[-10:])
         messages.append({"role": "user", "content": user_input})
 
-    return client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages, stream=True)
+    stream = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages, stream=True)
+    return stream, intent
 
 # --- UI SETUP ---
-st.set_page_config(page_title="NEXUS ULTIMATE", page_icon="🔱", layout="wide")
+st.set_page_config(page_title="NEXUS KNOWLEDGE AGENT", page_icon="🤖", layout="wide")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
     * { font-family: 'Outfit', sans-serif; }
-    .stApp { background: radial-gradient(circle at top right, #1e1b4b, #020617); color: #ffffff !important; }
-    .brand-text { font-size: 2.5rem; font-weight: 800; background: linear-gradient(45deg, #c084fc, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .stat-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); padding: 15px; border-radius: 15px; text-align: center; }
-    .chat-bubble-user { background: #7e22ce; padding: 12px 18px; border-radius: 18px 18px 0 18px; margin-bottom: 10px; margin-left: auto; max-width: 85%; font-size: 0.95rem; }
-    .chat-bubble-ai { background: rgba(30, 41, 59, 0.6); padding: 12px 18px; border-radius: 18px 18px 18px 0; margin-bottom: 10px; max-width: 85%; border: 1px solid rgba(255,255,255,0.1); font-size: 0.95rem; }
+    .stApp { background: #020617; color: #ffffff !important; }
+    .status-bar { display: flex; justify-content: flex-end; padding: 10px; gap: 15px; font-size: 0.8rem; }
+    .status-pill { padding: 4px 12px; border-radius: 20px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #10b981; }
+    .intent-badge { font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 4px; margin-top: 5px; display: inline-block; text-transform: uppercase; }
+    .badge-add { background: #059669; color: white; }
+    .badge-inquire { background: #2563eb; color: white; }
+    .badge-edit { background: #d97706; color: white; }
+    .badge-delete { background: #dc2626; color: white; }
+    .badge-chat { background: #4b5563; color: white; }
+    .chat-bubble-user { background: #7e22ce; padding: 12px 18px; border-radius: 18px 18px 0 18px; margin-bottom: 20px; margin-left: auto; max-width: 80%; }
+    .chat-bubble-ai { background: rgba(30, 41, 59, 0.6); padding: 12px 18px; border-radius: 18px 18px 18px 0; margin-bottom: 5px; max-width: 80%; border: 1px solid rgba(255,255,255,0.1); }
     </style>
+    """, unsafe_allow_html=True)
+
+# --- HEADER STATUS ---
+st.markdown("""
+    <div class='status-bar'>
+        <div class='status-pill'>● SQL Connected</div>
+        <div class='status-pill' style='border-color:#818cf8; color:#818cf8;'>● Llama 3.3 Active</div>
+    </div>
     """, unsafe_allow_html=True)
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("<div class='brand-text'>NEXUS AI</div>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color:#c084fc; font-weight:800;'>NEXUS AGENT</h1>", unsafe_allow_html=True)
     st.markdown("---")
-    if st.button("🗑️ Reset Chat", use_container_width=True):
+    if st.button("🗑️ New Session", use_container_width=True):
         st.session_state.messages = []; st.rerun()
 
-# --- TOP DASHBOARD ---
-t_assets = get_stats()
-c1, c2, c3, c4 = st.columns(4)
-with c1: st.markdown(f"<div class='stat-card'><div style='color:#94a3b8; font-size:0.7rem;'>ASSETS</div><div style='color:#c084fc; font-size:1.5rem; font-weight:800;'>{t_assets}</div></div>", unsafe_allow_html=True)
-with c2: st.markdown("<div class='stat-card'><div style='color:#94a3b8; font-size:0.7rem;'>STATUS</div><div style='color:#4ade80; font-size:1.5rem; font-weight:800;'>ACTIVE</div></div>", unsafe_allow_html=True)
-with c3: st.markdown("<div class='stat-card'><div style='color:#94a3b8; font-size:0.7rem;'>ENGINE</div><div style='color:#818cf8; font-size:1.5rem; font-weight:800;'>LLAMA 3</div></div>", unsafe_allow_html=True)
-with c4: st.markdown("<div class='stat-card'><div style='color:#94a3b8; font-size:0.7rem;'>UPTIME</div><div style='color:#f472b6; font-size:1.5rem; font-weight:800;'>99%</div></div>", unsafe_allow_html=True)
-
-st.markdown("---")
-
-# --- MAIN CONTENT: Chat + Graph ---
+# --- MAIN CONTENT ---
 col_left, col_right = st.columns([1.2, 0.8])
 
 with col_right:
-    st.markdown("### 🕸️ Knowledge Graph")
-    nodes = [Node(id="Amina", label="Amina", color="#c084fc"), Node(id="Orange", label="Orange", color="#818cf8")]
-    edges = [Edge(source="Amina", target="Orange", label="Works At", color="#ffffff")]
-    config = Config(width=500, height=400, directed=True, nodeHighlightBehavior=True, staticGraph=False)
-    agraph(nodes=nodes, edges=edges, config=config)
+    st.markdown("#### 🕸️ Graph Intelligence")
+    nodes = [Node(id="Amina", label="Amina", color="#c084fc"), Node(id="Nexus", label="Nexus", color="#818cf8")]
+    edges = [Edge(source="Amina", target="Nexus", label="Controls", color="#ffffff")]
+    agraph(nodes=nodes, edges=edges, config=Config(width=500, height=400, directed=True))
 
 with col_left:
     if "messages" not in st.session_state: st.session_state.messages = []
     
-    chat_container = st.container(height=450)
-    with chat_container:
-        for msg in st.session_state.messages:
-            cls = "chat-bubble-user" if msg["role"] == "user" else "chat-bubble-ai"
-            st.markdown(f"<div class='{cls}'>{msg['content']}</div>", unsafe_allow_html=True)
+    for msg in st.session_state.messages:
+        if msg["role"] == "user":
+            st.markdown(f"<div class='chat-bubble-user'>{msg['content']}</div>", unsafe_allow_html=True)
+        else:
+            intent_class = f"badge-{msg.get('intent', 'chat').lower()}"
+            st.markdown(f"<div class='chat-bubble-ai'>{msg['content']}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='intent-badge {intent_class}'>{msg.get('intent', 'CHAT')}</div><div style='margin-bottom:20px;'></div>", unsafe_allow_html=True)
 
-    if prompt := st.chat_input("Message NEXUS..."):
+    if prompt := st.chat_input("Command NEXUS Agent..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.rerun()
 
-    # Handle response logic outside the input to avoid refresh issues
     if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
         last_prompt = st.session_state.messages[-1]["content"]
-        with chat_container:
+        with st.spinner("Processing..."):
+            stream, intent = nex_ai_core(last_prompt, st.session_state.messages[:-1])
             full_res = ""; res_box = st.empty()
-            for chunk in nex_ai_core(last_prompt, st.session_state.messages[:-1]):
+            for chunk in stream:
                 if chunk.choices[0].delta.content:
                     full_res += chunk.choices[0].delta.content
                     res_box.markdown(f"<div class='chat-bubble-ai'>{full_res}▌</div>", unsafe_allow_html=True)
-            res_box.markdown(f"<div class='chat-bubble-ai'>{full_res}</div>", unsafe_allow_html=True)
-            st.session_state.messages.append({"role": "assistant", "content": full_res})
+            
+            intent_class = f"badge-{intent.lower()}"
+            res_box.markdown(f"<div class='chat-bubble-ai'>{full_res}</div><div class='intent-badge {intent_class}'>{intent}</div>", unsafe_allow_html=True)
+            st.session_state.messages.append({"role": "assistant", "content": full_res, "intent": intent})
             st.rerun()
