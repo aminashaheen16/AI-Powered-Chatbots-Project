@@ -6,7 +6,7 @@ import json
 load_dotenv()
 
 class LLMClient:
-    def __init__(self, model_name="llama3-70b-8192"):
+    def __init__(self, model_name="llama-3.3-70b-versatile"):
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             raise ValueError("GROQ_API_KEY not found in environment variables.")
@@ -46,6 +46,5 @@ class LLMClient:
                 yield chunk.choices[0].delta.content
 
     def generate_json(self, prompt, system_instruction=None):
-        # Groq supports JSON mode for some models, but let's stick to prompt engineering for compatibility
         res = self.generate(prompt + "\n\nRespond ONLY with a valid JSON object.", system_instruction)
         return res
