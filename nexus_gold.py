@@ -23,9 +23,8 @@ def query_db(sql):
     except Exception as e:
         return {"error": str(e)}
 
-# --- AI CORE WITH ENHANCED MEMORY ---
+# --- AI CORE ---
 def nex_ai_core(user_input, history):
-    # Phase 1: Intent Decision
     decision_prompt = f"Needs SQL? User: '{user_input}'. Respond JSON: {{\"sql_needed\": true/false}}"
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
@@ -42,72 +41,97 @@ def nex_ai_core(user_input, history):
         ).choices[0].message.content.strip()
         sql_res = sql_res.replace("```sql", "").replace("```", "").strip()
         db_res = query_db(sql_res)
-        
         final_prompt = f"Summarize results: {db_res} for: {user_input}"
-        # ENHANCED MEMORY: Pass more history
-        messages = [{"role": "system", "content": "You are NEXUS, an expert. Always remember user details like name/company from history."}]
-        messages.extend(history[-20:]) # Increased from 6 to 20
+        messages = [{"role": "system", "content": "You are NEXUS Agent."}]
+        messages.extend(history[-20:])
         messages.append({"role": "user", "content": final_prompt})
     else:
-        # ENHANCED MEMORY: Pass more history
-        messages = [{"role": "system", "content": "You are NEXUS, a friendly AI. Never forget user info mentioned earlier in this chat."}]
-        messages.extend(history[-30:]) # Increased from 10 to 30
+        messages = [{"role": "system", "content": "You are NEXUS Agent."}]
+        messages.extend(history[-30:])
         messages.append({"role": "user", "content": user_input})
 
     return client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages, stream=True)
 
 # --- UI SETUP ---
-st.set_page_config(page_title="NEXUS GOLD", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="NEXUS GOLD PRO", page_icon="⚡", layout="wide")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
     * { font-family: 'Outfit', sans-serif; }
     .stApp { background: #020617 !important; color: #ffffff !important; }
-    
-    .header-container { display: flex; align-items: center; justify-content: flex-start; padding: 10px 0; margin-bottom: 20px; }
     .header-logo { font-size: 2rem; font-weight: 800; color: #ffffff; }
     .header-logo span { color: #c084fc; }
-    
     .chat-bubble-user { background: #7e22ce; color: #ffffff; padding: 12px 20px; border-radius: 20px 20px 0 20px; margin-bottom: 15px; margin-left: auto; width: fit-content; max-width: 80%; }
     .chat-bubble-ai { background: #1e293b; color: #f1f5f9; border: 1px solid rgba(255,255,255,0.05); padding: 12px 20px; border-radius: 20px 20px 20px 0; margin-bottom: 15px; width: fit-content; max-width: 80%; line-height: 1.6; }
-    
     .stChatInputContainer { background-color: #020617 !important; border: 1px solid #1e293b !important; border-radius: 20px !important; }
     [data-testid="stSidebar"] { background: #010409 !important; border-right: 1px solid #1e293b; }
-    .stButton > button { background-color: #7e22ce !important; color: white !important; border-radius: 10px !important; border: none !important; font-weight: 600 !important; height: 45px !important; }
-    
+    .stButton > button { background-color: #7e22ce !important; color: white !important; border-radius: 10px !important; }
     header { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("<h2 style='color:#c084fc; font-weight:800; margin-bottom:20px;'>NEXUS PRO</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#c084fc; font-weight:800;'>NEXUS PRO</h2>", unsafe_allow_html=True)
+    mode = st.radio("Navigation", ["💬 Chat Terminal", "🏗️ System Architecture"], label_visibility="collapsed")
     if st.button("＋ New Chat", use_container_width=True):
         st.session_state.messages = []; st.rerun()
-    st.markdown("---")
-    st.caption("Memory Engine: Enhanced")
 
-# --- HEADER ---
-st.markdown("<div class='header-container'><div class='header-logo'>⚡ <span>NEXUS</span> GOLD</div></div>", unsafe_allow_html=True)
+# --- MAIN CONTENT ---
+if mode == "💬 Chat Terminal":
+    st.markdown("<div class='header-logo'>⚡ <span>NEXUS</span> GOLD</div>", unsafe_allow_html=True)
+    if "messages" not in st.session_state: st.session_state.messages = []
+    
+    for msg in st.session_state.messages:
+        cls = "chat-bubble-user" if msg["role"] == "user" else "chat-bubble-ai"
+        st.markdown(f"<div class={cls}>{msg['content']}</div>", unsafe_allow_html=True)
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+    if prompt := st.chat_input("Message NEXUS..."):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        st.markdown(f"<div class='chat-bubble-user'>{prompt}</div>", unsafe_allow_html=True)
+        with st.chat_message("assistant", avatar=None):
+            full_res = ""; res_box = st.empty()
+            for chunk in nex_ai_core(prompt, st.session_state.messages[:-1]):
+                if chunk.choices[0].delta.content:
+                    full_res += chunk.choices[0].delta.content
+                    res_box.markdown(f"<div class='chat-bubble-ai'>{full_res}▌</div>", unsafe_allow_html=True)
+            res_box.markdown(f"<div class='chat-bubble-ai'>{full_res}</div>", unsafe_allow_html=True)
+            st.session_state.messages.append({"role": "assistant", "content": full_res})
 
-# Display messages
-for msg in st.session_state.messages:
-    cls = "chat-bubble-user" if msg["role"] == "user" else "chat-bubble-ai"
-    st.markdown(f"<div class={cls}>{msg['content']}</div>", unsafe_allow_html=True)
-
-if prompt := st.chat_input("Message NEXUS..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.markdown(f"<div class='chat-bubble-user'>{prompt}</div>", unsafe_allow_html=True)
-
-    with st.chat_message("assistant", avatar=None):
-        full_res = ""; res_box = st.empty()
-        for chunk in nex_ai_core(prompt, st.session_state.messages[:-1]):
-            if chunk.choices[0].delta.content:
-                full_res += chunk.choices[0].delta.content
-                res_box.markdown(f"<div class='chat-bubble-ai'>{full_res}▌</div>", unsafe_allow_html=True)
-        res_box.markdown(f"<div class='chat-bubble-ai'>{full_res}</div>", unsafe_allow_html=True)
-        st.session_state.messages.append({"role": "assistant", "content": full_res})
+else:
+    st.markdown("### 🏗️ Agentic System Architecture")
+    st.markdown("The internal logic flow of the NEXUS Enterprise AI.")
+    
+    # Professional Mermaid Diagram
+    st.mermaid("""
+    graph TD
+        User((User Request)) --> UI[Streamlit UI]
+        UI --> Classifier{Intent Classifier}
+        
+        Classifier -- "SQL Needed" --> SQLGen[Llama 3.3: SQL Generator]
+        SQLGen --> Executor[SQLite Executor]
+        Executor --> DataSummary[Llama 3.3: Data Summarizer]
+        
+        Classifier -- "Chitchat" --> DirectRes[Llama 3.3: Direct Response]
+        
+        DataSummary --> FinalRes[Final AI Response]
+        DirectRes --> FinalRes
+        
+        FinalRes --> UI
+        
+        subgraph Memory Engine
+            History[(Conversation History)]
+        end
+        History -.-> Classifier
+        History -.-> SQLGen
+        History -.-> DirectRes
+    """)
+    
+    st.markdown("""
+    #### 🛠️ Tech Stack
+    - **Frontend**: Streamlit (Python-based Web Framework)
+    - **Intelligence Engine**: Groq API (Llama 3.3 70B Versatile)
+    - **Database**: SQLite (Asset & Inventory Management)
+    - **Memory**: Context-Aware State Management (Session-based)
+    """)
