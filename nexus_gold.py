@@ -32,7 +32,6 @@ def get_stats():
 
 # --- AI CORE WITH MEMORY ---
 def nex_ai_core(user_input, history):
-    # Phase 1: Determine intent (using recent context)
     decision_prompt = f"Does this need inventory data? User: '{user_input}'. Respond in JSON: {{\"sql_needed\": true/false}}"
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
@@ -52,13 +51,12 @@ def nex_ai_core(user_input, history):
         db_res = query_db(sql_res)
         
         final_prompt = f"Summarize these results: {db_res} for the user. User asked: {user_input}"
-        messages = [{"role": "system", "content": "You are NEXUS, an inventory expert. Use the provided context to answer."}]
-        messages.extend(history[-6:]) # Include last 3 exchanges for context
+        messages = [{"role": "system", "content": "You are NEXUS, an inventory expert."}]
+        messages.extend(history[-6:])
         messages.append({"role": "user", "content": final_prompt})
     else:
-        # Build messages with history
-        messages = [{"role": "system", "content": "You are NEXUS, a friendly AI assistant with perfect memory of this conversation."}]
-        messages.extend(history[-10:]) # Include last 5 exchanges
+        messages = [{"role": "system", "content": "You are NEXUS, a friendly AI assistant with memory."}]
+        messages.extend(history[-10:])
         messages.append({"role": "user", "content": user_input})
 
     return client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages, stream=True)
@@ -75,9 +73,6 @@ st.markdown("""
     .stTabs [data-baseweb="tab"] { height: 50px; background-color: rgba(255,255,255,0.02); border-radius: 10px; padding: 0 20px; color: #94a3b8; border: none; }
     .stTabs [aria-selected="true"] { background-color: rgba(126, 34, 206, 0.2); color: #c084fc; border-bottom: 2px solid #c084fc; }
     
-    .stat-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); padding: 25px; border-radius: 20px; text-align: center; }
-    .stat-value { font-size: 2.5rem; font-weight: 800; color: #c084fc; }
-    
     .chat-bubble-user { background: #7e22ce; padding: 15px 20px; border-radius: 20px 20px 0 20px; margin-bottom: 15px; margin-left: auto; max-width: 70%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
     .chat-bubble-ai { background: #1e293b; padding: 15px 20px; border-radius: 20px 20px 20px 0; margin-bottom: 15px; max-width: 70%; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
     </style>
@@ -86,7 +81,6 @@ st.markdown("""
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown("<h1 style='color:#c084fc; font-weight:800;'>NEXUS PRO</h1>", unsafe_allow_html=True)
-    st.caption("Central Enterprise Platform")
     st.markdown("---")
     if st.button("🗑️ Reset All Sessions", use_container_width=True):
         st.session_state.messages = []; st.rerun()
@@ -104,23 +98,22 @@ with tab1:
     if prompt := st.chat_input("Ask NEXUS..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
         st.markdown(f"<div class='chat-bubble-user'>{prompt}</div>", unsafe_allow_html=True)
-        with st.chat_message("assistant", vertical_alignment="top"):
-            full_res = ""; res_box = st.empty()
-            # PASS HISTORY TO AI CORE
-            for chunk in nex_ai_core(prompt, st.session_state.messages[:-1]):
-                if chunk.choices[0].delta.content:
-                    full_res += chunk.choices[0].delta.content
-                    res_box.markdown(f"<div class='chat-bubble-ai'>{full_res}▌</div>", unsafe_allow_html=True)
-            res_box.markdown(f"<div class='chat-bubble-ai'>{full_res}</div>", unsafe_allow_html=True)
-            st.session_state.messages.append({"role": "assistant", "content": full_res})
+        
+        full_res = ""; res_box = st.empty()
+        for chunk in nex_ai_core(prompt, st.session_state.messages[:-1]):
+            if chunk.choices[0].delta.content:
+                full_res += chunk.choices[0].delta.content
+                res_box.markdown(f"<div class='chat-bubble-ai'>{full_res}▌</div>", unsafe_allow_html=True)
+        res_box.markdown(f"<div class='chat-bubble-ai'>{full_res}</div>", unsafe_allow_html=True)
+        st.session_state.messages.append({"role": "assistant", "content": full_res})
 
 with tab2:
     st.markdown("### 📈 Asset Intelligence")
     total, active = get_stats()
     c1, c2, c3 = st.columns(3)
-    with c1: st.markdown(f"<div class='stat-card'><div style='color:#94a3b8'>TOTAL ASSETS</div><div class='stat-value'>{total}</div></div>", unsafe_allow_html=True)
-    with c2: st.markdown(f"<div class='stat-card'><div style='color:#94a3b8'>ACTIVE ITEMS</div><div class='stat-value' style='color:#4ade80'>{active}</div></div>", unsafe_allow_html=True)
-    with c3: st.markdown(f"<div class='stat-card'><div style='color:#94a3b8'>AI UPTIME</div><div class='stat-value' style='color:#818cf8'>99.9%</div></div>", unsafe_allow_html=True)
+    with c1: st.markdown(f"<div class='stat-card' style='background:rgba(255,255,255,0.03); padding:20px; border-radius:15px; text-align:center;'><div style='color:#94a3b8'>TOTAL ASSETS</div><div style='font-size:2rem; font-weight:800; color:#c084fc;'>{total}</div></div>", unsafe_allow_html=True)
+    with c2: st.markdown(f"<div class='stat-card' style='background:rgba(255,255,255,0.03); padding:20px; border-radius:15px; text-align:center;'><div style='color:#94a3b8'>ACTIVE ITEMS</div><div style='font-size:2rem; font-weight:800; color:#4ade80;'>{active}</div></div>", unsafe_allow_html=True)
+    with c3: st.markdown(f"<div class='stat-card' style='background:rgba(255,255,255,0.03); padding:20px; border-radius:15px; text-align:center;'><div style='color:#94a3b8'>AI UPTIME</div><div style='font-size:2rem; font-weight:800; color:#818cf8;'>99.9%</div></div>", unsafe_allow_html=True)
     
     st.markdown("<br>#### 📋 Master Inventory List", unsafe_allow_html=True)
     db_data = query_db("SELECT * FROM Assets")
