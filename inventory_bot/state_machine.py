@@ -18,17 +18,7 @@ class AgentState(TypedDict):
 llm = LLMClient()
 
 def intent_classifier(state: AgentState):
-    prompt = f"""
-    You are an intent classifier for a business chatbot.
-    Classify the user input into exactly one of these: 'chitchat' or 'query'.
-    
-    Examples:
-    - "Hi", "How are you?", "Who are you?" -> 'chitchat'
-    - "Show me all laptops", "What items are in Cairo?", "Update price" -> 'query'
-    
-    User Input: {state['user_input']}
-    Respond ONLY in JSON format: {{"intent": "chitchat" | "query"}}
-    """
+    prompt = f"Identify if the user wants to 'query' the inventory database or just 'chitchat'. User Input: {state['user_input']}. Respond in JSON format: {{\"intent\": \"query\" or \"chitchat\"}}"
     res = llm.generate_json(prompt)
     try:
         intent_data = json.loads(res)
@@ -38,92 +28,45 @@ def intent_classifier(state: AgentState):
 
 def sql_generator(state: AgentState):
     schema = """
-    Tables:
-    - AssetCategories (id, name)
-    - Vendors (id, name, contact)
-    - Locations (id, name, address)
-    - Assets (id, name, category_id, vendor_id, location_id, status, quantity)
-    
-    Business Rules:
-    - Default to 'Active' status unless specified.
-    - Exclude 'Disposed' or 'Retired' unless asked.
+    Tables: Assets (id, name, quantity, status, category_id, vendor_id, location_id)
     """
-    
-    prompt = f"""
-    Generate a valid SQLite query for the following request.
-    Schema: {schema}
-    User Request: {state['user_input']}
-    
-    Respond ONLY with the SQL query.
-    """
-    query = llm.generate(prompt)
-    # Basic cleanup
+    prompt = f"Generate a SQLite query for: {state['user_input']}. Schema: {schema}. Respond ONLY with SQL."
+    query = llm.generate(prompt, system_instruction="You are a SQL generator. Output ONLY raw SQL code.")
     query = query.replace("```sql", "").replace("```", "").strip()
     return {**state, "sql_query": query}
 
 def sql_executor(state: AgentState):
     res = execute_query(state['sql_query'])
-    if "error" in res:
-        return {**state, "error": res['error'], "query_results": None}
+    if "error" in res: return {**state, "error": res['error'], "query_results": None}
     return {**state, "query_results": res, "error": ""}
 
 def sql_corrector(state: AgentState):
-    if not state['error'] or state['retry_count'] >= 2:
-        return state
-    
-    prompt = f"""
-    The following SQL query failed with an error. Correct it.
-    Query: {state['sql_query']}
-    Error: {state['error']}
-    
-    Respond ONLY with the corrected SQL query.
-    """
-    corrected_query = llm.generate(prompt)
-    corrected_query = corrected_query.replace("```sql", "").replace("```", "").strip()
-    return {**state, "sql_query": corrected_query, "retry_count": state['retry_count'] + 1}
+    if not state['error'] or state['retry_count'] >= 2: return state
+    prompt = f"Fix this SQL: {state['sql_query']}. Error: {state['error']}."
+    corrected = llm.generate(prompt, system_instruction="Fix SQL errors and output ONLY the corrected SQL.")
+    return {**state, "sql_query": corrected.strip(), "retry_count": state['retry_count'] + 1}
 
 def responder(state: AgentState):
     if state['intent'] == 'chitchat':
-        prompt = f"You are a helpful AI assistant named NEXUS. Respond naturally to the user: {state['user_input']}"
-        res = llm.generate(prompt)
+        res = llm.generate(state['user_input'])
     elif state['error']:
-        res = f"I encountered an issue while processing the data: {state['error']}"
+        res = f"I couldn't find that in the database. Error: {state['error']}"
     else:
-        prompt = f"""
-        You are NEXUS, an AI inventory manager. Summarize these database results for the user.
-        User Question: {state['user_input']}
-        Database Data: {json.dumps(state['query_results'])}
-        
-        Provide a clean, professional, and friendly answer.
-        """
+        prompt = f"Summarize these inventory results for the user: {json.dumps(state['query_results'])}. User asked: {state['user_input']}"
         res = llm.generate(prompt)
     
     return {**state, "response": res}
 
-# Building the Graph
+# Graph setup
 workflow = StateGraph(AgentState)
-
-workflow.add_node("intent", intent_classifier)
-workflow.add_node("generator", sql_generator)
-workflow.add_node("executor", sql_executor)
-workflow.add_node("corrector", sql_corrector)
+workflow.add_node("intent", intent_classifier); workflow.add_node("generator", sql_generator)
+workflow.add_node("executor", sql_executor); workflow.add_node("corrector", sql_corrector)
 workflow.add_node("responder", responder)
 
 workflow.set_entry_point("intent")
-
-def route_intent(state: AgentState):
-    if state['intent'] == 'chitchat':
-        return "responder"
-    return "generator"
-
-def route_execution(state: AgentState):
-    if state['error'] and state['retry_count'] < 2:
-        return "corrector"
-    return "responder"
-
-workflow.add_conditional_edges("intent", route_intent)
+workflow.add_conditional_edges("intent", lambda x: "responder" if x['intent'] == 'chitchat' else "generator")
 workflow.add_edge("generator", "executor")
-workflow.add_conditional_edges("executor", route_execution)
+workflow.add_conditional_edges("executor", lambda x: "corrector" if x['error'] and x['retry_count'] < 2 else "responder")
 workflow.add_edge("corrector", "executor")
 workflow.add_edge("responder", END)
 
