@@ -19,17 +19,22 @@ llm = LLMClient()
 
 def intent_classifier(state: AgentState):
     prompt = f"""
-    Classify the user input into 'chitchat' or 'query'.
-    'chitchat': Greetings, personal questions, or general talk.
-    'query': Questions about assets, inventory, vendors, locations, or database records.
+    You are an intent classifier for a business chatbot.
+    Classify the user input into exactly one of these: 'chitchat' or 'query'.
+    
+    Examples:
+    - "Hi", "How are you?", "Who are you?" -> 'chitchat'
+    - "Show me all laptops", "What items are in Cairo?", "Update price" -> 'query'
     
     User Input: {state['user_input']}
-    
-    Respond in JSON format: {{"intent": "chitchat" | "query"}}
+    Respond ONLY in JSON format: {{"intent": "chitchat" | "query"}}
     """
     res = llm.generate_json(prompt)
-    intent_data = json.loads(res)
-    return {**state, "intent": intent_data['intent']}
+    try:
+        intent_data = json.loads(res)
+        return {**state, "intent": intent_data.get('intent', 'chitchat')}
+    except:
+        return {**state, "intent": "chitchat"}
 
 def sql_generator(state: AgentState):
     schema = """
@@ -79,17 +84,17 @@ def sql_corrector(state: AgentState):
 
 def responder(state: AgentState):
     if state['intent'] == 'chitchat':
-        prompt = f"Respond to this greeting or chitchat naturally: {state['user_input']}"
+        prompt = f"You are a helpful AI assistant named NEXUS. Respond naturally to the user: {state['user_input']}"
         res = llm.generate(prompt)
     elif state['error']:
-        res = f"I'm sorry, I couldn't process your request. Error: {state['error']}"
+        res = f"I encountered an issue while processing the data: {state['error']}"
     else:
         prompt = f"""
-        Format the following database results into a natural language response.
-        User Query: {state['user_input']}
-        Results: {json.dumps(state['query_results'])}
+        You are NEXUS, an AI inventory manager. Summarize these database results for the user.
+        User Question: {state['user_input']}
+        Database Data: {json.dumps(state['query_results'])}
         
-        Respond naturally.
+        Provide a clean, professional, and friendly answer.
         """
         res = llm.generate(prompt)
     
