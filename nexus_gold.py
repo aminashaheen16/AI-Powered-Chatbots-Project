@@ -30,8 +30,9 @@ def get_stats():
     active = query_db("SELECT COUNT(*) FROM Assets WHERE status='Active'")['data'][0][0]
     return total, active
 
-# --- AI CORE ---
-def nex_ai_core(user_input):
+# --- AI CORE WITH MEMORY ---
+def nex_ai_core(user_input, history):
+    # Phase 1: Determine intent (using recent context)
     decision_prompt = f"Does this need inventory data? User: '{user_input}'. Respond in JSON: {{\"sql_needed\": true/false}}"
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
@@ -51,9 +52,14 @@ def nex_ai_core(user_input):
         db_res = query_db(sql_res)
         
         final_prompt = f"Summarize these results: {db_res} for the user. User asked: {user_input}"
-        messages = [{"role": "system", "content": "You are NEXUS, a world-class inventory expert. Be concise."}, {"role": "user", "content": final_prompt}]
+        messages = [{"role": "system", "content": "You are NEXUS, an inventory expert. Use the provided context to answer."}]
+        messages.extend(history[-6:]) # Include last 3 exchanges for context
+        messages.append({"role": "user", "content": final_prompt})
     else:
-        messages = [{"role": "system", "content": "You are NEXUS, a friendly AI assistant."}, {"role": "user", "content": user_input}]
+        # Build messages with history
+        messages = [{"role": "system", "content": "You are NEXUS, a friendly AI assistant with perfect memory of this conversation."}]
+        messages.extend(history[-10:]) # Include last 5 exchanges
+        messages.append({"role": "user", "content": user_input})
 
     return client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages, stream=True)
 
@@ -72,8 +78,8 @@ st.markdown("""
     .stat-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); padding: 25px; border-radius: 20px; text-align: center; }
     .stat-value { font-size: 2.5rem; font-weight: 800; color: #c084fc; }
     
-    .chat-bubble-user { background: #7e22ce; padding: 15px 20px; border-radius: 20px 20px 0 20px; margin-bottom: 15px; margin-left: auto; max-width: 70%; }
-    .chat-bubble-ai { background: #1e293b; padding: 15px 20px; border-radius: 20px 20px 20px 0; margin-bottom: 15px; max-width: 70%; border: 1px solid rgba(255,255,255,0.1); }
+    .chat-bubble-user { background: #7e22ce; padding: 15px 20px; border-radius: 20px 20px 0 20px; margin-bottom: 15px; margin-left: auto; max-width: 70%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+    .chat-bubble-ai { background: #1e293b; padding: 15px 20px; border-radius: 20px 20px 20px 0; margin-bottom: 15px; max-width: 70%; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
     </style>
     """, unsafe_allow_html=True)
 
@@ -100,7 +106,8 @@ with tab1:
         st.markdown(f"<div class='chat-bubble-user'>{prompt}</div>", unsafe_allow_html=True)
         with st.chat_message("assistant", vertical_alignment="top"):
             full_res = ""; res_box = st.empty()
-            for chunk in nex_ai_core(prompt):
+            # PASS HISTORY TO AI CORE
+            for chunk in nex_ai_core(prompt, st.session_state.messages[:-1]):
                 if chunk.choices[0].delta.content:
                     full_res += chunk.choices[0].delta.content
                     res_box.markdown(f"<div class='chat-bubble-ai'>{full_res}▌</div>", unsafe_allow_html=True)
