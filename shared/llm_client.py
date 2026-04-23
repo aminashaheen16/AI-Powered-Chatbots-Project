@@ -1,40 +1,51 @@
 import os
-import google.generativeai as genai
+from groq import Groq
 from dotenv import load_dotenv
 import json
 
 load_dotenv()
 
 class LLMClient:
-    def __init__(self, model_name="models/gemini-flash-latest"):
-        api_key = os.getenv("GEMINI_API_KEY")
+    def __init__(self, model_name="llama3-70b-8192"):
+        api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
-            raise ValueError("GEMINI_API_KEY not found in environment variables.")
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(model_name)
+            raise ValueError("GROQ_API_KEY not found in environment variables.")
+        self.client = Groq(api_key=api_key)
+        self.model = model_name
 
     def generate(self, prompt, system_instruction=None):
-        full_prompt = f"{system_instruction}\n\nUser: {prompt}" if system_instruction else prompt
-        response = self.model.generate_content(full_prompt)
-        return response.text.strip()
+        messages = []
+        if system_instruction:
+            messages.append({"role": "system", "content": system_instruction})
+        messages.append({"role": "user", "content": prompt})
+        
+        completion = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            temperature=0.7,
+            max_tokens=1024,
+            top_p=1,
+            stream=False,
+            stop=None,
+        )
+        return completion.choices[0].message.content.strip()
 
     def generate_stream(self, prompt, system_instruction=None):
-        full_prompt = f"{system_instruction}\n\nUser: {prompt}" if system_instruction else prompt
-        response = self.model.generate_content(full_prompt, stream=True)
-        for chunk in response:
-            if chunk.text:
-                yield chunk.text
+        messages = []
+        if system_instruction:
+            messages.append({"role": "system", "content": system_instruction})
+        messages.append({"role": "user", "content": prompt})
+        
+        completion = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            stream=True,
+        )
+        for chunk in completion:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
 
     def generate_json(self, prompt, system_instruction=None):
-        json_prompt = f"{prompt}\n\nRespond ONLY with a valid JSON object. Do not include markdown formatting like ```json."
-        full_prompt = f"{system_instruction}\n\n{json_prompt}" if system_instruction else json_prompt
-        
-        response = self.model.generate_content(full_prompt)
-        text = response.text.strip()
-        
-        if text.startswith("```"):
-            text = text.split("\n", 1)[-1].rsplit("\n", 1)[0].strip()
-            if text.startswith("json"):
-                text = text[4:].strip()
-                
-        return text
+        # Groq supports JSON mode for some models, but let's stick to prompt engineering for compatibility
+        res = self.generate(prompt + "\n\nRespond ONLY with a valid JSON object.", system_instruction)
+        return res
