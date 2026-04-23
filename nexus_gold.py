@@ -3,6 +3,7 @@ import os
 import sqlite3
 import json
 import time
+import pandas as pd
 from groq import Groq
 from dotenv import load_dotenv
 
@@ -26,7 +27,8 @@ def query_db(sql):
 def get_stats():
     res = query_db("SELECT COUNT(*) FROM Assets")
     total = res['data'][0][0] if not res.get('error') else 0
-    return total
+    active = query_db("SELECT COUNT(*) FROM Assets WHERE status='Active'")['data'][0][0]
+    return total, active
 
 # --- AI CORE ---
 def nex_ai_core(user_input):
@@ -49,86 +51,72 @@ def nex_ai_core(user_input):
         db_res = query_db(sql_res)
         
         final_prompt = f"Summarize these results: {db_res} for the user. User asked: {user_input}"
-        messages = [{"role": "system", "content": "You are NEXUS, a world-class inventory expert. Be concise and professional."}, {"role": "user", "content": final_prompt}]
+        messages = [{"role": "system", "content": "You are NEXUS, a world-class inventory expert. Be concise."}, {"role": "user", "content": final_prompt}]
     else:
-        messages = [{"role": "system", "content": "You are NEXUS, a friendly and intelligent AI assistant. Respond with personality."}, {"role": "user", "content": user_input}]
+        messages = [{"role": "system", "content": "You are NEXUS, a friendly AI assistant."}, {"role": "user", "content": user_input}]
 
-    # Return stream for better UX
-    return client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=messages,
-        stream=True
-    )
+    return client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages, stream=True)
 
 # --- UI SETUP ---
-st.set_page_config(page_title="NEXUS GOLD PRO", page_icon="🔱", layout="wide")
+st.set_page_config(page_title="NEXUS PRO PLATFORM", page_icon="🔱", layout="wide")
 
-# Custom CSS for Premium Look
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
     * { font-family: 'Outfit', sans-serif; }
+    .stApp { background: #020617; color: #ffffff !important; }
+    .stTabs [data-baseweb="tab-list"] { gap: 24px; background-color: transparent; }
+    .stTabs [data-baseweb="tab"] { height: 50px; background-color: rgba(255,255,255,0.02); border-radius: 10px; padding: 0 20px; color: #94a3b8; border: none; }
+    .stTabs [aria-selected="true"] { background-color: rgba(126, 34, 206, 0.2); color: #c084fc; border-bottom: 2px solid #c084fc; }
     
-    .stApp { background: radial-gradient(circle at top right, #1e1b4b, #020617); color: #ffffff !important; }
+    .stat-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); padding: 25px; border-radius: 20px; text-align: center; }
+    .stat-value { font-size: 2.5rem; font-weight: 800; color: #c084fc; }
     
-    [data-testid="stSidebar"] { background-color: rgba(2, 6, 23, 0.8) !important; backdrop-filter: blur(10px); border-right: 1px solid rgba(255,255,255,0.05); }
-    
-    .stat-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 15px; text-align: center; }
-    .stat-value { font-size: 1.8rem; font-weight: 800; color: #c084fc; }
-    .stat-label { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
-    
-    .chat-bubble-user { background: linear-gradient(135deg, #7e22ce, #9333ea); padding: 15px 20px; border-radius: 20px 20px 0 20px; margin-bottom: 15px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); max-width: 80%; margin-left: auto; }
-    .chat-bubble-ai { background: rgba(30, 41, 59, 0.5); border: 1px solid rgba(255,255,255,0.1); padding: 15px 20px; border-radius: 20px 20px 20px 0; margin-bottom: 15px; backdrop-filter: blur(5px); max-width: 80%; }
-    
-    .stChatInputContainer { border-radius: 30px !important; border: 1px solid rgba(255,255,255,0.1) !important; background: rgba(15, 23, 42, 0.8) !important; }
+    .chat-bubble-user { background: #7e22ce; padding: 15px 20px; border-radius: 20px 20px 0 20px; margin-bottom: 15px; margin-left: auto; max-width: 70%; }
+    .chat-bubble-ai { background: #1e293b; padding: 15px 20px; border-radius: 20px 20px 20px 0; margin-bottom: 15px; max-width: 70%; border: 1px solid rgba(255,255,255,0.1); }
     </style>
     """, unsafe_allow_html=True)
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("<h1 style='background: linear-gradient(45deg, #c084fc, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800;'>NEXUS GOLD</h1>", unsafe_allow_html=True)
-    st.caption("v2.0 | Enterprise Edition")
+    st.markdown("<h1 style='color:#c084fc; font-weight:800;'>NEXUS PRO</h1>", unsafe_allow_html=True)
+    st.caption("Central Enterprise Platform")
     st.markdown("---")
-    if st.button("🗑️ Clear History", use_container_width=True):
-        st.session_state.messages = []
-        st.rerun()
-    st.markdown("---")
-    st.info("System optimized for Groq Llama 3.3. Database connected and secured.")
+    if st.button("🗑️ Reset All Sessions", use_container_width=True):
+        st.session_state.messages = []; st.rerun()
 
-# --- TOP STATS ---
-total_assets = get_stats()
-s1, s2, s3, s4 = st.columns(4)
-with s1: st.markdown(f"<div class='stat-card'><div class='stat-label'>Total Assets</div><div class='stat-value'>{total_assets}</div></div>", unsafe_allow_html=True)
-with s2: st.markdown("<div class='stat-card'><div class='stat-label'>System Status</div><div class='stat-value' style='color:#4ade80'>Stable</div></div>", unsafe_allow_html=True)
-with s3: st.markdown("<div class='stat-card'><div class='stat-label'>AI Engine</div><div class='stat-value' style='color:#818cf8'>Llama 3.3</div></div>", unsafe_allow_html=True)
-with s4: st.markdown("<div class='stat-card'><div class='stat-label'>Location</div><div class='stat-value' style='color:#f472b6'>Headquarters</div></div>", unsafe_allow_html=True)
+# --- MAIN TABS ---
+tab1, tab2 = st.tabs(["💬 AI Chat Terminal", "📊 Enterprise Dashboard"])
 
-st.markdown("<br>", unsafe_allow_html=True)
+with tab1:
+    if "messages" not in st.session_state: st.session_state.messages = []
+    
+    for msg in st.session_state.messages:
+        cls = "chat-bubble-user" if msg["role"] == "user" else "chat-bubble-ai"
+        st.markdown(f"<div class='{cls}'>{msg['content']}</div>", unsafe_allow_html=True)
 
-# --- CHAT INTERFACE ---
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+    if prompt := st.chat_input("Ask NEXUS..."):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        st.markdown(f"<div class='chat-bubble-user'>{prompt}</div>", unsafe_allow_html=True)
+        with st.chat_message("assistant", vertical_alignment="top"):
+            full_res = ""; res_box = st.empty()
+            for chunk in nex_ai_core(prompt):
+                if chunk.choices[0].delta.content:
+                    full_res += chunk.choices[0].delta.content
+                    res_box.markdown(f"<div class='chat-bubble-ai'>{full_res}▌</div>", unsafe_allow_html=True)
+            res_box.markdown(f"<div class='chat-bubble-ai'>{full_res}</div>", unsafe_allow_html=True)
+            st.session_state.messages.append({"role": "assistant", "content": full_res})
 
-# Display history with custom bubbles
-for msg in st.session_state.messages:
-    if msg["role"] == "user":
-        st.markdown(f"<div class='chat-bubble-user'>{msg['content']}</div>", unsafe_allow_html=True)
-    else:
-        st.markdown(f"<div class='chat-bubble-ai'>{msg['content']}</div>", unsafe_allow_html=True)
-
-if prompt := st.chat_input("Command NEXUS..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.markdown(f"<div class='chat-bubble-user'>{prompt}</div>", unsafe_allow_html=True)
-
-    with st.spinner(" "):
-        full_response = ""
-        stream = nex_ai_core(prompt)
-        # Create a container for the streaming response
-        res_box = st.empty()
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                full_response += chunk.choices[0].delta.content
-                res_box.markdown(f"<div class='chat-bubble-ai'>{full_response}▌</div>", unsafe_allow_html=True)
-        
-        res_box.markdown(f"<div class='chat-bubble-ai'>{full_response}</div>", unsafe_allow_html=True)
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
+with tab2:
+    st.markdown("### 📈 Asset Intelligence")
+    total, active = get_stats()
+    c1, c2, c3 = st.columns(3)
+    with c1: st.markdown(f"<div class='stat-card'><div style='color:#94a3b8'>TOTAL ASSETS</div><div class='stat-value'>{total}</div></div>", unsafe_allow_html=True)
+    with c2: st.markdown(f"<div class='stat-card'><div style='color:#94a3b8'>ACTIVE ITEMS</div><div class='stat-value' style='color:#4ade80'>{active}</div></div>", unsafe_allow_html=True)
+    with c3: st.markdown(f"<div class='stat-card'><div style='color:#94a3b8'>AI UPTIME</div><div class='stat-value' style='color:#818cf8'>99.9%</div></div>", unsafe_allow_html=True)
+    
+    st.markdown("<br>#### 📋 Master Inventory List", unsafe_allow_html=True)
+    db_data = query_db("SELECT * FROM Assets")
+    if not db_data.get('error'):
+        df = pd.DataFrame(db_data['data'], columns=db_data['cols'])
+        st.dataframe(df, use_container_width=True, hide_index=True)
