@@ -12,28 +12,37 @@ class LLMClient:
             raise ValueError("GROQ_API_KEY not found in environment variables.")
         self.client = Groq(api_key=api_key)
         self.model = model_name
-        self.system_prompt = "You are NEXUS, a friendly, professional, and intelligent AI Assistant. Always respond naturally and helpfully to the user. Never say you have no greeting to respond to."
+        self.system_prompt = "You are NEXUS, a friendly, professional, and intelligent AI Assistant. Always respond naturally and helpfully."
+
+    def _ensure_content(self, content):
+        # Prevent Groq 400 error for empty/null content
+        if not content or str(content).strip() == "":
+            return "..."
+        return str(content)
 
     def generate(self, prompt, system_instruction=None):
-        sys_msg = system_instruction if system_instruction else self.system_prompt
+        sys_msg = self._ensure_content(system_instruction if system_instruction else self.system_prompt)
+        user_msg = self._ensure_content(prompt)
+        
         messages = [
             {"role": "system", "content": sys_msg},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": user_msg}
         ]
         
         completion = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
-            temperature=0.8,
-            max_tokens=1024,
+            temperature=0.7,
         )
         return completion.choices[0].message.content.strip()
 
     def generate_stream(self, prompt, system_instruction=None):
-        sys_msg = system_instruction if system_instruction else self.system_prompt
+        sys_msg = self._ensure_content(system_instruction if system_instruction else self.system_prompt)
+        user_msg = self._ensure_content(prompt)
+        
         messages = [
             {"role": "system", "content": sys_msg},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": user_msg}
         ]
         
         completion = self.client.chat.completions.create(
@@ -46,10 +55,10 @@ class LLMClient:
                 yield chunk.choices[0].delta.content
 
     def generate_json(self, prompt, system_instruction=None):
-        # When generating JSON, we need to be strict
+        user_msg = self._ensure_content(prompt)
         messages = [
             {"role": "system", "content": "You are a JSON assistant. Respond ONLY with valid JSON. No prose."},
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": user_msg}
         ]
         completion = self.client.chat.completions.create(
             model=self.model,
