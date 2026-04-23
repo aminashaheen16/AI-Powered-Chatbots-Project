@@ -119,7 +119,8 @@ elif mode == "✨ Key Features":
         st.markdown("<div class='feature-card' style='background:rgba(6,95,70,0.15); border-color:#065f46;'><div class='feature-title' style='color:#10b981;'>Auto-retry on error</div><div class='feature-desc'>If SQL execution fails, the agent regenerates the query automatically with the error in context.</div></div>", unsafe_allow_html=True)
         st.markdown("<div class='feature-card' style='background:rgba(180,83,9,0.15); border-color:#b45309;'><div class='feature-title' style='color:#fbbf24;'>Evaluation suite</div><div class='feature-desc'>Traces and measures intent accuracy and query validity for continuous performance monitoring.</div></div>", unsafe_allow_html=True)
 
-    st.markdown("<br>#### 🧠 Memory Type Comparison", unsafe_allow_html=True)
+    # FIXED: Removed #### and using clean HTML
+    st.markdown("<br><h4 style='color:#ffffff;'>🧠 Memory Type Comparison</h4>", unsafe_allow_html=True)
     mem_data = {
         "Memory Type": ["Short-term", "Long-term"],
         "Storage": ["RAM - Session State", "SQLite - Disk"],
