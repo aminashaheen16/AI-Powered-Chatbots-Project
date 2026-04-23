@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-class Neo4jManager:
+class GraphDB:
     def __init__(self):
         self.uri = os.getenv("NEO4J_URI", "bolt://localhost:7687")
         self.user = os.getenv("NEO4J_USER", "neo4j")
@@ -19,19 +19,14 @@ class Neo4jManager:
         if self.driver:
             self.driver.close()
 
-    def run_query(self, query, parameters=None):
+    def execute_query(self, query, parameters=None):
         if not self.driver:
-            return {"error": "Neo4j driver not initialized."}
+            raise Exception("Neo4j driver not initialized.")
         
         with self.driver.session() as session:
-            try:
-                result = session.run(query, parameters)
-                return [record.data() for record in result]
-            except Exception as e:
-                return {"error": str(e)}
+            result = session.run(query, parameters)
+            return [record for record in result]
 
-def test_connection():
-    manager = Neo4jManager()
-    res = manager.run_query("RETURN 'Connection Successful' as msg")
-    manager.close()
-    return res
+    def run_query(self, query, parameters=None):
+        # Compatibility wrapper
+        return [record.data() for record in self.execute_query(query, parameters)]
