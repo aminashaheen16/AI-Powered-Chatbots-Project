@@ -67,17 +67,20 @@ st.markdown("""
     
     .chat-container { display: flex; align-items: flex-start; margin-bottom: 25px; }
     .user-msg { justify-content: flex-end; }
-    .bubble { padding: 15px 22px; border-radius: 20px; max-width: 85%; }
+    .bubble { padding: 15px 22px; border-radius: 20px; max-width: 85%; line-height: 1.6; }
     .bubble-user { background: #7e22ce; color: white; border-radius: 22px 22px 0 22px; margin-left: auto; }
     .bubble-ai { background: #1e293b; color: #f1f5f9; border: 1px solid rgba(255,255,255,0.05); border-radius: 22px 22px 22px 0; }
     .avatar-ai { width: 40px; height: 40px; background: #fbbf24; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 1.3rem; }
     
-    .flow-step { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: center; }
-    .flow-arrow { font-size: 1.5rem; color: #c084fc; text-align: center; margin-bottom: 15px; }
+    /* Feature Cards */
+    .feature-card { padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); height: 180px; margin-bottom: 20px; }
+    .feature-title { font-weight: 800; font-size: 1.1rem; margin-bottom: 10px; }
+    .feature-desc { font-size: 0.8rem; color: #cbd5e1; line-height: 1.4; }
     
-    .code-box { background: #010409; border: 1px solid #7e22ce; border-radius: 10px; padding: 15px; color: #c084fc; font-family: monospace; font-size: 0.9rem; }
-    
+    .stChatInputContainer { background-color: #010409 !important; border: 1px solid #30363d !important; border-radius: 15px !important; }
     [data-testid="stSidebar"] { background: #010409 !important; border-right: 1px solid #1e293b; }
+    .stButton > button { background-color: #7e22ce !important; color: white !important; border-radius: 12px !important; }
+    
     header { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
@@ -85,7 +88,7 @@ st.markdown("""
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown("<h2 style='color:#c084fc; font-weight:800; margin-top:20px;'>NEXUS PRO</h2>", unsafe_allow_html=True)
-    mode = st.radio("Navigation", ["💬 Chat Terminal", "📊 Evaluation", "🎬 Logic Flow Demo"])
+    mode = st.radio("Navigation", ["💬 Chat Terminal", "✨ Key Features", "📊 Evaluation", "🎬 Logic Flow Demo"])
     if st.button("＋ New Chat", use_container_width=True):
         st.session_state.messages = []; st.rerun()
 
@@ -101,8 +104,7 @@ if mode == "💬 Chat Terminal":
             else:
                 st.markdown(f"<div class='chat-container'><div class='avatar-ai'>🤖</div><div class='bubble bubble-ai'>{msg['content']}</div></div>", unsafe_allow_html=True)
     if prompt := st.chat_input("Message NEXUS..."):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.rerun()
+        st.session_state.messages.append({"role": "user", "content": prompt}); st.rerun()
     if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
         last_p = st.session_state.messages[-1]["content"]
         with chat_box:
@@ -115,40 +117,28 @@ if mode == "💬 Chat Terminal":
             r_box.markdown(f"<div class='chat-container'><div class='avatar-ai'>🤖</div><div class='bubble bubble-ai'>{f_res}</div></div>", unsafe_allow_html=True)
             st.session_state.messages.append({"role": "assistant", "content": f_res}); st.rerun()
 
+elif mode == "✨ Key Features":
+    st.markdown("### ✨ NEXUS Core Features")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown("<div class='feature-card' style='background:rgba(126,34,206,0.15); border-color:#7e22ce;'><div class='feature-title' style='color:#c084fc;'>Intent classifier</div><div class='feature-desc'>Detects add, inquire, edit, delete, chitchat, and out_of_scope intents using Llama 3.3.</div></div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card' style='background:rgba(5,150,105,0.15); border-color:#059669;'><div class='feature-title' style='color:#34d399;'>Short-term memory</div><div class='feature-desc'>Session-based context tracking for pronoun resolution and continuous dialogue.</div></div>", unsafe_allow_html=True)
+    with c2:
+        st.markdown("<div class='feature-card' style='background:rgba(37,99,235,0.15); border-color:#2563eb;'><div class='feature-title' style='color:#60a5fa;'>Query Generation</div><div class='feature-desc'>Real-time conversion of natural language into optimized SQLite/Cypher queries.</div></div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card' style='background:rgba(15,23,42,0.5); border-color:#334155;'><div class='feature-title' style='color:#94a3b8;'>Long-term memory</div><div class='feature-desc'>Persistent disk storage for historical data and cross-session knowledge.</div></div>", unsafe_allow_html=True)
+    with c3:
+        st.markdown("<div class='feature-card' style='background:rgba(6,95,70,0.15); border-color:#065f46;'><div class='feature-title' style='color:#10b981;'>Auto-retry logic</div><div class='feature-desc'>Self-healing query generation that retries on execution errors automatically.</div></div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card' style='background:rgba(180,83,9,0.15); border-color:#b45309;'><div class='feature-title' style='color:#fbbf24;'>Evaluation Suite</div><div class='feature-desc'>Continuous monitoring of intent accuracy and query validity using LangSmith.</div></div>", unsafe_allow_html=True)
+
+    st.markdown("<br><h4 style='color:#ffffff;'>🧠 Memory Engine Comparison</h4>", unsafe_allow_html=True)
+    st.table(pd.DataFrame([{"Type": "Short-term", "Survives Restart": "❌ No", "Purpose": "Context"}, {"Type": "Long-term", "Survives Restart": "✅ Yes", "Purpose": "Retrieval"}]))
+
 elif mode == "📊 Evaluation":
-    st.markdown("### 📊 Evaluation Results")
+    st.markdown("### 📊 Evaluation Metrics")
     st.success("90% Accuracy | 100% Valid SQL")
     st.table(pd.DataFrame([{"Input": "Test 1", "Result": "✓"}, {"Input": "Test 2", "Result": "✓"}]))
 
 else:
-    st.markdown("### 🎬 Example Flow — Natural Language to Query")
-    st.caption("A real-time breakdown of how NEXUS processes your request.")
-    
-    col_a, col_b, col_c = st.columns(3)
-    with col_a:
-        st.markdown("<div class='flow-step'><b>User says</b><br><small>\"Sama works at Google\"</small></div>", unsafe_allow_html=True)
-    with col_b:
-        st.markdown("<div class='flow-step' style='border-color:#7e22ce;'><b>Classifier</b><br><small>Intent: ADD</small></div>", unsafe_allow_html=True)
-    with col_c:
-        st.markdown("<div class='flow-step'><b>Query Generator</b><br><small>Llama 3.3 Engine</small></div>", unsafe_allow_html=True)
-    
-    st.markdown("<div class='flow-arrow'>↓</div>", unsafe_allow_html=True)
-    
-    st.markdown("""
-    <div class='code-box'>
-    -- Generated SQL Query<br>
-    INSERT INTO Assets (name, company, role) <br>
-    VALUES ('Sama', 'Google', 'AI Engineer');<br>
-    SELECT * FROM Assets WHERE name = 'Sama';
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("<div class='flow-arrow'>↓</div>", unsafe_allow_html=True)
-    
-    col_d, col_e = st.columns(2)
-    with col_d:
-        st.markdown("<div class='flow-step' style='border-color:#10b981;'><b>SQLite Stores</b><br><small>Row persisted on disk</small></div>", unsafe_allow_html=True)
-    with col_e:
-        st.markdown("<div class='flow-step'><b>Agent Responds</b><br><small>\"Got it! Stored that Sama works at Google.\"</small></div>", unsafe_allow_html=True)
-    
-    st.info("Next message: 'Where does she work?' → resolves 'she' = Sama from session history → Success ✓")
+    st.markdown("### 🎬 Logic Flow Demo")
+    st.info("Demonstrating natural language to database execution flow.")
+    st.code("-- Example Generated Query\nSELECT * FROM Assets WHERE name = 'Sama';", language="sql")
