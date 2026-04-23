@@ -4,6 +4,7 @@ import os
 import time
 import json
 import uuid
+import pandas as pd
 
 # Path setup
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -20,122 +21,141 @@ except ImportError as e:
     st.stop()
 
 # --- Page Config ---
-st.set_page_config(page_title="NEXUS", page_icon="💡", layout="wide")
+st.set_page_config(page_title="NEXUS Enterprise", page_icon="🏢", layout="wide")
 
-# --- Custom CSS (Ultra Minimalist) ---
+# --- Corporate CSS ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-    * { font-family: 'Inter', sans-serif; }
-    .stApp { background-color: #ffffff; }
-    [data-testid="stSidebar"] { background-color: #f8fafc !important; border-right: 1px solid #e2e8f0 !important; }
-    .nexus-logo { font-size: 2rem; font-weight: 800; letter-spacing: -1.5px; color: #0f172a; margin-bottom: 20px; }
-    .stButton button { width: 100%; border-radius: 8px; }
-    .chat-history-item { 
-        padding: 10px; border-radius: 8px; cursor: pointer; margin-bottom: 5px; font-size: 0.9rem;
-        border: 1px solid transparent; transition: 0.2s;
+    @import url('https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap');
+    * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    
+    .stApp { background-color: #f3f4f6; }
+    
+    /* Sidebar - Corporate Navy */
+    [data-testid="stSidebar"] {
+        background-color: #0f172a !important;
+        color: #ffffff !important;
     }
-    .chat-history-item:hover { background-color: #f1f5f9; border-color: #e2e8f0; }
-    .active-chat { background-color: #e2e8f0 !important; font-weight: 600; }
+    
+    .sidebar-title { color: #38bdf8; font-size: 1.5rem; font-weight: 700; margin-bottom: 20px; }
+    
+    /* Corporate Header */
+    .corp-header {
+        background-color: #ffffff;
+        padding: 15px 30px;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    /* Stats Cards */
+    .metric-card {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    /* Chat Bubbles - Clean Corporate */
+    .msg-box { padding: 15px; border-radius: 8px; margin-bottom: 10px; line-height: 1.6; }
+    .user-msg { background-color: #e0f2fe; border-left: 5px solid #0369a1; color: #0c4a6e; }
+    .bot-msg { background-color: #ffffff; border: 1px solid #e5e7eb; color: #1f2937; }
+    
+    .stButton button { border-radius: 4px; font-weight: 600; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- Session Management ---
+# --- Logic: Data Fetching ---
+def get_inventory_summary():
+    res = execute_query("SELECT name, quantity, status FROM Assets")
+    if "data" in res:
+        return pd.DataFrame(res['data'], columns=res['columns'])
+    return pd.DataFrame()
+
+# --- Session & History ---
 HISTORY_FILE = os.path.join(current_dir, "data/sessions.json")
-os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
-
-def load_history():
-    if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, "r") as f:
-            return json.load(f)
-    return {}
-
-def save_history(history):
-    with open(HISTORY_FILE, "w") as f:
-        json.dump(history, f, indent=4)
-
 if "sessions" not in st.session_state:
-    st.session_state.sessions = load_history()
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, "r") as f: st.session_state.sessions = json.load(f)
+    else: st.session_state.sessions = {}
 
 if "current_session_id" not in st.session_state:
     st.session_state.current_session_id = str(uuid.uuid4())
-    st.session_state.sessions[st.session_state.current_session_id] = {"title": "New Chat", "messages": [], "bot_type": "Inventory Bot (SQL)"}
+    st.session_state.sessions[st.session_state.current_session_id] = {"title": "New Session", "messages": [], "bot_type": "Inventory Bot (SQL)"}
 
 # --- Sidebar ---
 with st.sidebar:
-    st.markdown("<div class='nexus-logo'>NEXUS</div>", unsafe_allow_html=True)
-    
-    if st.button("＋ New Chat", use_container_width=True):
+    st.markdown("<div class='sidebar-title'>NEXUS ERP</div>", unsafe_allow_html=True)
+    if st.button("＋ New Support Ticket"):
         st.session_state.current_session_id = str(uuid.uuid4())
-        st.session_state.sessions[st.session_state.current_session_id] = {"title": "New Chat", "messages": [], "bot_type": "Inventory Bot (SQL)"}
+        st.session_state.sessions[st.session_state.current_session_id] = {"title": "New Session", "messages": [], "bot_type": "Inventory Bot (SQL)"}
         st.rerun()
     
     st.markdown("---")
-    st.markdown("<small style='color:#64748b'>HISTORY</small>", unsafe_allow_html=True)
-    
-    # List previous sessions
-    for sid, data in list(st.session_state.sessions.items())[::-1]:
-        active_class = "active-chat" if sid == st.session_state.current_session_id else ""
-        if st.button(data["title"], key=sid, help=f"Switch to {data['title']}"):
+    st.markdown("<small>RECENT LOGS</small>", unsafe_allow_html=True)
+    for sid, data in list(st.session_state.sessions.items())[::-1][:10]:
+        if st.button(data["title"], key=sid):
             st.session_state.current_session_id = sid
             st.rerun()
 
-    st.markdown("---")
-    bot_type = st.selectbox("Engine", ["Inventory Bot (SQL)", "Knowledge Graph Bot (Neo4j)"], 
-                             index=0 if st.session_state.sessions[st.session_state.current_session_id]["bot_type"] == "Inventory Bot (SQL)" else 1)
-    st.session_state.sessions[st.session_state.current_session_id]["bot_type"] = bot_type
+# --- Main Dashboard ---
+st.markdown("""<div class='corp-header'><div><h3 style='margin:0;'>Management Dashboard</h3><p style='margin:0; font-size:0.8rem; color:#6b7280;'>Enterprise Resource Intelligence</p></div></div>""", unsafe_allow_html=True)
 
-# --- Main App ---
-current_session = st.session_state.sessions[st.session_state.current_session_id]
+tab1, tab2 = st.tabs(["📊 Inventory Overview", "💬 AI Assistant"])
 
-# Display Messages
-for message in current_session["messages"]:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# Chat Input
-if prompt := st.chat_input("Message NEXUS..."):
-    # Update Title if it's a new chat
-    if current_session["title"] == "New Chat":
-        current_session["title"] = prompt[:25] + ("..." if len(prompt) > 25 else "")
+with tab1:
+    col1, col2, col3 = st.columns(3)
+    df = get_inventory_summary()
+    with col1: st.markdown(f"<div class='metric-card'><small>TOTAL ASSETS</small><h3>{df['quantity'].sum() if not df.empty else 0}</h3></div>", unsafe_allow_html=True)
+    with col2: st.markdown(f"<div class='metric-card'><small>ACTIVE UNITS</small><h3>{df[df['status']=='Active']['quantity'].sum() if not df.empty else 0}</h3></div>", unsafe_allow_html=True)
+    with col3: st.markdown(f"<div class='metric-card'><small>CATEGORIES</small><h3>3</h3></div>", unsafe_allow_html=True)
     
-    current_session["messages"].append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+    st.markdown("#### Detailed Inventory List")
+    if not df.empty: st.dataframe(df, use_container_width=True)
+    else: st.info("No assets found in the database.")
 
-    with st.chat_message("assistant"):
-        response_placeholder = st.empty()
-        full_response = ""
+with tab2:
+    current_session = st.session_state.sessions[st.session_state.current_session_id]
+    bot_type = st.selectbox("Select AI Agent", ["Inventory Bot (SQL)", "Knowledge Graph Bot (Neo4j)"])
+    current_session["bot_type"] = bot_type
+    
+    chat_box = st.container()
+    with chat_box:
+        for msg in current_session["messages"]:
+            style = "user-msg" if msg["role"] == "user" else "bot-msg"
+            st.markdown(f"<div class='msg-box {style}'><b>{msg['role'].upper()}:</b><br>{msg['content']}</div>", unsafe_allow_html=True)
+
+    if prompt := st.chat_input("Query the system..."):
+        if current_session["title"] == "New Session":
+            current_session["title"] = prompt[:30]
         
-        try:
-            llm = LLMClient()
-            # For simplicity, we stream directly from LLM for chitchat/synthesis
-            # In a real app, you'd wrap the graph logic for streaming, but here we'll simulate it for the final response
-            
-            if bot_type == "Inventory Bot (SQL)":
-                # Get the final response from the graph
-                result = inventory_app.invoke({
-                    "user_input": prompt, "intent": "", "sql_query": "",
-                    "query_results": None, "error": "", "history": [],
-                    "response": "", "retry_count": 0
-                })
-                raw_response = result["response"]
-            else:
-                agent = KnowledgeAgent()
-                raw_response = agent.handle_message(prompt)
-            
-            # Simulate streaming for the raw_response
-            for chunk in raw_response.split(" "):
-                full_response += chunk + " "
-                response_placeholder.markdown(full_response + "▌")
-                time.sleep(0.05)
-            response_placeholder.markdown(full_response)
-            
-            current_session["messages"].append({"role": "assistant", "content": full_response})
-            save_history(st.session_state.sessions)
-            
-        except Exception as e:
-            st.error(f"Error: {e}")
+        current_session["messages"].append({"role": "user", "content": prompt})
+        st.rerun()
 
-st.sidebar.markdown("---")
-st.sidebar.caption("🟢 Core: v4.0 (Streaming)")
+    # Response Logic
+    if current_session["messages"] and current_session["messages"][-1]["role"] == "user":
+        with st.spinner("Analyzing corporate data..."):
+            try:
+                llm = LLMClient()
+                if bot_type == "Inventory Bot (SQL)":
+                    result = inventory_app.invoke({"user_input": prompt, "intent": "", "sql_query": "", "query_results": None, "error": "", "history": [], "response": "", "retry_count": 0})
+                    response = result["response"]
+                else:
+                    agent = KnowledgeAgent(); response = agent.handle_message(prompt)
+                
+                # Streaming Simulation
+                placeholder = st.empty()
+                full_res = ""
+                for chunk in response.split(" "):
+                    full_res += chunk + " "
+                    placeholder.markdown(f"<div class='msg-box bot-msg'><b>ASSISTANT:</b><br>{full_res}▌</div>", unsafe_allow_html=True)
+                    time.sleep(0.04)
+                placeholder.markdown(f"<div class='msg-box bot-msg'><b>ASSISTANT:</b><br>{full_res}</div>", unsafe_allow_html=True)
+                
+                current_session["messages"].append({"role": "assistant", "content": full_res})
+                with open(HISTORY_FILE, "w") as f: json.dump(st.session_state.sessions, f, indent=4)
+                st.rerun()
+            except Exception as e: st.error(f"System Error: {e}")
