@@ -1,4 +1,4 @@
-# 🔱 NEXUS: AI-Powered Chatbots Project (Advanced Edition)
+# 🔱 NEXUS: AI-Powered Chatbots Project (v2.0 Advanced)
 
 This repository contains two distinct AI-powered conversational agents designed for terminal-based interaction with SQL and Neo4j databases, now enhanced with Memory, APIs, and Evaluation.
 
