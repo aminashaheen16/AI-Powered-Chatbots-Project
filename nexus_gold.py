@@ -62,34 +62,42 @@ st.markdown("""
     .stApp { background: #020617 !important; color: #ffffff !important; }
     
     /* Header styling - Left Aligned */
-    .header-container { display: flex; align-items: center; justify-content: flex-start; padding: 20px 0; margin-bottom: 30px; }
-    .header-logo { font-size: 2.2rem; font-weight: 800; color: #ffffff; letter-spacing: -1px; }
+    .header-container { display: flex; align-items: center; justify-content: flex-start; padding: 10px 0; margin-bottom: 20px; }
+    .header-logo { font-size: 2rem; font-weight: 800; color: #ffffff; }
     .header-logo span { color: #c084fc; }
     
     /* Chat bubbles */
-    .chat-bubble-user { background: #7e22ce; color: #ffffff; padding: 15px 25px; border-radius: 25px 25px 0 25px; margin-bottom: 20px; margin-left: auto; width: fit-content; max-width: 80%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-    .chat-bubble-ai { background: #1e293b; color: #f1f5f9; border: 1px solid rgba(255,255,255,0.05); padding: 15px 25px; border-radius: 25px 25px 25px 0; margin-bottom: 20px; width: fit-content; max-width: 80%; line-height: 1.6; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    .chat-bubble-user { background: #7e22ce; color: #ffffff; padding: 12px 20px; border-radius: 20px 20px 0 20px; margin-bottom: 15px; margin-left: auto; width: fit-content; max-width: 80%; }
+    .chat-bubble-ai { background: #1e293b; color: #f1f5f9; border: 1px solid rgba(255,255,255,0.05); padding: 12px 20px; border-radius: 20px 20px 20px 0; margin-bottom: 15px; width: fit-content; max-width: 80%; line-height: 1.6; }
     
-    /* Input Bar - Matching Chat Background (Navy/Dark Blue) */
-    .stChatInputContainer { background-color: #020617 !important; border: 1px solid #1e293b !important; border-radius: 20px !important; margin-bottom: 20px !important; }
-    .stChatInputContainer textarea { background-color: transparent !important; color: white !important; font-size: 1rem !important; }
+    /* Input Bar */
+    .stChatInputContainer { background-color: #020617 !important; border: 1px solid #1e293b !important; border-radius: 20px !important; }
     
-    /* Sidebar */
+    /* Sidebar styling */
     [data-testid="stSidebar"] { background: #010409 !important; border-right: 1px solid #1e293b; }
     
-    /* Hide default Streamlit header for cleaner look */
+    /* New Chat Button Styling */
+    .stButton > button { background-color: #7e22ce !important; color: white !important; border-radius: 10px !important; border: none !important; font-weight: 600 !important; height: 45px !important; }
+    .stButton > button:hover { background-color: #9333ea !important; box-shadow: 0 4px 15px rgba(126, 34, 206, 0.4) !important; }
+    
     header { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("<h2 style='color:#c084fc; font-weight:800; margin-top:20px;'>NEXUS PRO</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#c084fc; font-weight:800; margin-bottom:20px;'>NEXUS PRO</h2>", unsafe_allow_html=True)
+    
+    # NEW CHAT BUTTON
+    if st.button("＋ New Chat", use_container_width=True):
+        st.session_state.messages = []
+        st.rerun()
+        
     st.markdown("---")
-    if st.button("🗑️ Reset Chat", use_container_width=True):
-        st.session_state.messages = []; st.rerun()
+    st.caption("AI Status: Active")
+    st.caption("DB Engine: Connected")
 
-# --- HEADER (Left Aligned as requested) ---
+# --- HEADER ---
 st.markdown("""
     <div class='header-container'>
         <div class='header-logo'>⚡ <span>NEXUS</span> GOLD</div>
