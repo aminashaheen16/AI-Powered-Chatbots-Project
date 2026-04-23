@@ -1,30 +1,33 @@
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
+import json
 
 load_dotenv()
 
 class LLMClient:
-    def __init__(self, model_name="gemini-1.5-flash"):
+    def __init__(self, model_name="models/gemini-flash-latest"):
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
-            # Fallback for testing or if environment isn't set yet
-            api_key = "dummy_key" 
+            raise ValueError("GEMINI_API_KEY not found in environment variables.")
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel(model_name)
 
     def generate(self, prompt, system_instruction=None):
-        if system_instruction:
-            full_prompt = f"System: {system_instruction}\n\nUser: {prompt}"
-        else:
-            full_prompt = prompt
-        
+        full_prompt = f"{system_instruction}\n\nUser: {prompt}" if system_instruction else prompt
         response = self.model.generate_content(full_prompt)
         return response.text.strip()
 
     def generate_json(self, prompt, system_instruction=None):
-        response = self.model.generate_content(
-            f"{system_instruction}\n\n{prompt}" if system_instruction else prompt,
-            generation_config={"response_mime_type": "application/json"}
-        )
-        return response.text.strip()
+        json_prompt = f"{prompt}\n\nRespond ONLY with a valid JSON object. Do not include markdown formatting like ```json."
+        full_prompt = f"{system_instruction}\n\n{json_prompt}" if system_instruction else json_prompt
+        
+        response = self.model.generate_content(full_prompt)
+        text = response.text.strip()
+        
+        if text.startswith("```"):
+            text = text.split("\n", 1)[-1].rsplit("\n", 1)[0].strip()
+            if text.startswith("json"):
+                text = text[4:].strip()
+                
+        return text
