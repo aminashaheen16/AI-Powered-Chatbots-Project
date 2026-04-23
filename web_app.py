@@ -15,90 +15,90 @@ except ImportError as e:
     st.stop()
 
 # --- Page Config ---
-st.set_page_config(page_title="Nexus AI | Futuristic Suite", page_icon="💎", layout="wide")
+st.set_page_config(page_title="Nexus AI | Minimalist", page_icon="🏢", layout="wide")
 
-# --- Glassmorphism CSS ---
+# --- Minimalist CSS (Apple Style) ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;600&family=Inter:wght@400;700&display=swap');
 
     html, body, [data-testid="stAppViewContainer"] {
         font-family: 'Inter', sans-serif;
-        background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
-        background-size: cover;
-        background-attachment: fixed;
+        background-color: #f5f5f7 !important;
     }
 
     .stApp {
-        background: rgba(15, 23, 42, 0.7); /* Overlay to make text readable */
+        background-color: #f5f5f7 !important;
     }
 
-    /* Glassmorphism containers */
+    /* Clean Chat Containers */
     div[data-testid="stChatMessage"] {
-        background: rgba(255, 255, 255, 0.05) !important;
-        backdrop-filter: blur(10px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 20px !important;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
-        margin: 15px 0 !important;
+        background-color: #ffffff !important;
+        border: 1px solid #e5e5e7 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.02) !important;
+        margin: 10px 0 !important;
+        padding: 20px !important;
     }
 
-    /* Sidebar Glassmorphism */
+    /* User Message Highlight */
+    div[data-testid="stChatMessage"]:nth-child(even) {
+        border-right: 4px solid #007aff !important;
+    }
+
+    /* Assistant Message Highlight */
+    div[data-testid="stChatMessage"]:nth-child(odd) {
+        border-left: 4px solid #34c759 !important;
+    }
+
+    /* Sidebar - Corporate Look */
     section[data-testid="stSidebar"] {
-        background: rgba(2, 6, 23, 0.8) !important;
-        backdrop-filter: blur(15px) !important;
-        border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background-color: #ffffff !important;
+        border-right: 1px solid #e5e5e7 !important;
     }
 
-    /* Titles */
+    /* Professional Title */
     h1 {
-        font-size: 3rem !important;
-        font-weight: 800 !important;
-        background: linear-gradient(to right, #00f2fe, #4facfe);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        text-shadow: 0px 10px 20px rgba(0,0,0,0.2);
+        font-family: 'SF Pro Display', sans-serif;
+        font-weight: 700 !important;
+        color: #1d1d1f !important;
+        letter-spacing: -0.5px;
     }
 
-    /* Chat Input */
+    /* Input Box - Clean */
     .stChatInputContainer {
-        background: rgba(255, 255, 255, 0.05) !important;
-        backdrop-filter: blur(10px) !important;
-        border-radius: 30px !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        border-radius: 12px !important;
+        border: 1px solid #d2d2d7 !important;
+        background-color: #ffffff !important;
     }
 
-    /* Buttons and Selectbox */
-    .stSelectbox div[data-baseweb="select"] {
-        background-color: rgba(255, 255, 255, 0.05) !important;
-        border-radius: 10px !important;
+    /* Custom scrollbar for a cleaner look */
+    ::-webkit-scrollbar {
+        width: 8px;
     }
-
-    /* Animations */
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+    ::-webkit-scrollbar-track {
+        background: #f5f5f7;
     }
-    .stChatMessage {
-        animation: fadeIn 0.5s ease-out;
+    ::-webkit-scrollbar-thumb {
+        background: #d2d2d7;
+        border-radius: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
 
 # --- Sidebar ---
 with st.sidebar:
-    st.markdown("<div style='text-align: center;'><img src='https://cdn-icons-png.flaticon.com/512/2040/2040504.png' width='100'></div>", unsafe_allow_html=True)
-    st.markdown("<h1 style='text-align: center; font-size: 2rem !important;'>NEXUS</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #94a3b8;'>Quantum Chat Engine v3.0</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color: #007aff;'>🏢 Nexus Enterprise</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size: 0.9rem; color: #86868b;'>Corporate Intelligence Suite</p>", unsafe_allow_html=True)
     st.markdown("---")
-    bot_type = st.selectbox("Switch Core Engine", ["Inventory Bot (SQL)", "Knowledge Graph Bot (Neo4j)"])
+    bot_type = st.selectbox("Select Business Engine", ["Inventory Bot (SQL)", "Knowledge Graph Bot (Neo4j)"])
     st.markdown("---")
-    st.markdown("🟢 **Engine Status**: Optimized")
-    st.markdown("🧠 **Memory**: Active (Long-Term)")
+    st.markdown("🟢 **System**: Operational")
+    st.markdown("🔒 **Security**: End-to-End Encrypted")
 
 # --- Main App ---
-st.title("💎 Nexus AI Suite")
-st.markdown(f"**Current Protocol:** {bot_type}")
+st.title("Nexus AI Assistant")
+st.markdown(f"<p style='color: #86868b;'>Active Workflow: {bot_type}</p>", unsafe_allow_html=True)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -107,17 +107,19 @@ if "last_bot" not in st.session_state or st.session_state.last_bot != bot_type:
     st.session_state.messages = []
     st.session_state.last_bot = bot_type
 
+# Display chat history
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-if prompt := st.chat_input("Initiate query..."):
+# Chat input
+if prompt := st.chat_input("Enter your business query..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("Analyzing data through quantum neural nodes..."):
+        with st.spinner("Processing request..."):
             try:
                 if bot_type == "Inventory Bot (SQL)":
                     result = inventory_app.invoke({
@@ -133,7 +135,7 @@ if prompt := st.chat_input("Initiate query..."):
                 st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
             except Exception as e:
-                st.error(f"Execution Error: {e}")
+                st.error(f"System Error: {e}")
 
-st.markdown("---")
-st.markdown("<p style='text-align: center; opacity: 0.5;'>NEXUS AI © 2026 | Next-Gen AI Interfaces</p>", unsafe_allow_html=True)
+st.markdown("<br><br><br>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #d2d2d7; font-size: 0.8rem;'>NEXUS ENTERPRISE © 2026</p>", unsafe_allow_html=True)
