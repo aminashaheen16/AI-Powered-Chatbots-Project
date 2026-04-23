@@ -3,6 +3,7 @@ import os
 import sqlite3
 import json
 import time
+import pandas as pd
 from groq import Groq
 from dotenv import load_dotenv
 
@@ -60,13 +61,17 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
     * { font-family: 'Outfit', sans-serif; }
     .stApp { background: #020617 !important; color: #ffffff !important; }
-    .header-logo { font-size: 2rem; font-weight: 800; color: #ffffff; }
+    .header-logo { font-size: 2rem; font-weight: 800; color: #ffffff; margin-bottom: 20px; }
     .header-logo span { color: #c084fc; }
+    
+    .feature-card { padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); height: 180px; margin-bottom: 20px; }
+    .feature-title { font-weight: 800; font-size: 1.1rem; margin-bottom: 10px; }
+    .feature-desc { font-size: 0.8rem; color: #cbd5e1; line-height: 1.4; }
+    
     .chat-bubble-user { background: #7e22ce; color: #ffffff; padding: 12px 20px; border-radius: 20px 20px 0 20px; margin-bottom: 15px; margin-left: auto; width: fit-content; max-width: 80%; }
     .chat-bubble-ai { background: #1e293b; color: #f1f5f9; border: 1px solid rgba(255,255,255,0.05); padding: 12px 20px; border-radius: 20px 20px 20px 0; margin-bottom: 15px; width: fit-content; max-width: 80%; line-height: 1.6; }
-    .stChatInputContainer { background-color: #020617 !important; border: 1px solid #1e293b !important; border-radius: 20px !important; }
+    
     [data-testid="stSidebar"] { background: #010409 !important; border-right: 1px solid #1e293b; }
-    .stButton > button { background-color: #7e22ce !important; color: white !important; border-radius: 10px !important; }
     header { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
@@ -74,7 +79,7 @@ st.markdown("""
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown("<h2 style='color:#c084fc; font-weight:800;'>NEXUS PRO</h2>", unsafe_allow_html=True)
-    mode = st.radio("Navigation", ["💬 Chat Terminal", "🏗️ System Architecture"], label_visibility="collapsed")
+    mode = st.sidebar.radio("Navigation", ["💬 Chat Terminal", "✨ Key Features", "🏗️ System Architecture"])
     if st.button("＋ New Chat", use_container_width=True):
         st.session_state.messages = []; st.rerun()
 
@@ -82,7 +87,6 @@ with st.sidebar:
 if mode == "💬 Chat Terminal":
     st.markdown("<div class='header-logo'>⚡ <span>NEXUS</span> GOLD</div>", unsafe_allow_html=True)
     if "messages" not in st.session_state: st.session_state.messages = []
-    
     for msg in st.session_state.messages:
         cls = "chat-bubble-user" if msg["role"] == "user" else "chat-bubble-ai"
         st.markdown(f"<div class={cls}>{msg['content']}</div>", unsafe_allow_html=True)
@@ -99,39 +103,41 @@ if mode == "💬 Chat Terminal":
             res_box.markdown(f"<div class='chat-bubble-ai'>{full_res}</div>", unsafe_allow_html=True)
             st.session_state.messages.append({"role": "assistant", "content": full_res})
 
-else:
-    st.markdown("### 🏗️ Agentic System Architecture")
-    st.markdown("The internal logic flow of the NEXUS Enterprise AI.")
+elif mode == "✨ Key Features":
+    st.markdown("### ✨ Key Features")
+    c1, c2, c3 = st.columns(3)
     
-    # Professional Mermaid Diagram
+    with c1:
+        st.markdown("<div class='feature-card' style='background:rgba(126,34,206,0.15); border-color:#7e22ce;'><div class='feature-title' style='color:#c084fc;'>Intent classifier</div><div class='feature-desc'>Detects add, inquire, edit, delete, chitchat, and out_of_scope intents from natural language using Llama 3.3.</div></div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card' style='background:rgba(5,150,105,0.15); border-color:#059669;'><div class='feature-title' style='color:#34d399;'>Short-term memory</div><div class='feature-desc'>State-aware session memory that tracks context and resolves pronouns (e.g. 'her name', 'it').</div></div>", unsafe_allow_html=True)
+        
+    with c2:
+        st.markdown("<div class='feature-card' style='background:rgba(37,99,235,0.15); border-color:#2563eb;'><div class='feature-title' style='color:#60a5fa;'>SQL Generation</div><div class='feature-desc'>Converts natural language into valid SQLite queries. Validates syntax before execution.</div></div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card' style='background:rgba(15,23,42,0.5); border-color:#334155;'><div class='feature-title' style='color:#94a3b8;'>Long-term memory</div><div class='feature-desc'>Persistent database storage that survives server restarts and is available across all sessions.</div></div>", unsafe_allow_html=True)
+        
+    with c3:
+        st.markdown("<div class='feature-card' style='background:rgba(6,95,70,0.15); border-color:#065f46;'><div class='feature-title' style='color:#10b981;'>Auto-retry on error</div><div class='feature-desc'>If SQL execution fails, the agent regenerates the query automatically with the error in context.</div></div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card' style='background:rgba(180,83,9,0.15); border-color:#b45309;'><div class='feature-title' style='color:#fbbf24;'>Evaluation suite</div><div class='feature-desc'>Traces and measures intent accuracy and query validity for continuous performance monitoring.</div></div>", unsafe_allow_html=True)
+
+    st.markdown("<br>#### 🧠 Memory Type Comparison", unsafe_allow_html=True)
+    mem_data = {
+        "Memory Type": ["Short-term", "Long-term"],
+        "Storage": ["RAM - Session State", "SQLite - Disk"],
+        "Survives Restart": ["❌ No", "✅ Yes"],
+        "Scope": ["Current Session", "Global Context"],
+        "Purpose": ["Pronoun resolution", "Knowledge retrieval"]
+    }
+    st.table(pd.DataFrame(mem_data))
+
+else:
+    st.markdown("### 🏗️ System Architecture")
     st.mermaid("""
     graph TD
-        User((User Request)) --> UI[Streamlit UI]
+        User((User)) --> UI[Streamlit UI]
         UI --> Classifier{Intent Classifier}
-        
-        Classifier -- "SQL Needed" --> SQLGen[Llama 3.3: SQL Generator]
-        SQLGen --> Executor[SQLite Executor]
-        Executor --> DataSummary[Llama 3.3: Data Summarizer]
-        
-        Classifier -- "Chitchat" --> DirectRes[Llama 3.3: Direct Response]
-        
-        DataSummary --> FinalRes[Final AI Response]
-        DirectRes --> FinalRes
-        
-        FinalRes --> UI
-        
-        subgraph Memory Engine
-            History[(Conversation History)]
-        end
-        History -.-> Classifier
-        History -.-> SQLGen
-        History -.-> DirectRes
-    """)
-    
-    st.markdown("""
-    #### 🛠️ Tech Stack
-    - **Frontend**: Streamlit (Python-based Web Framework)
-    - **Intelligence Engine**: Groq API (Llama 3.3 70B Versatile)
-    - **Database**: SQLite (Asset & Inventory Management)
-    - **Memory**: Context-Aware State Management (Session-based)
+        Classifier -- SQL --> SQLGen[SQL Generator]
+        SQLGen --> Executor[DB Executor]
+        Executor --> Response[Final Response]
+        Classifier -- Chat --> Direct[Direct Chat]
+        Direct --> Response
     """)
