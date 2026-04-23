@@ -25,8 +25,7 @@ def query_db(sql):
 
 # --- AI CORE WITH MEMORY ---
 def nex_ai_core(user_input, history):
-    # Phase 1: Determine if we need SQL
-    decision_prompt = f"Does this need inventory data? User: '{user_input}'. Respond in JSON: {{\"sql_needed\": true/false}}"
+    decision_prompt = f"Needs SQL? User: '{user_input}'. Respond JSON: {{\"sql_needed\": true/false}}"
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "system", "content": "You are a JSON classifier."}, {"role": "user", "content": decision_prompt}],
@@ -35,20 +34,19 @@ def nex_ai_core(user_input, history):
     decision = json.loads(response.choices[0].message.content)
     
     if decision.get("sql_needed"):
-        sql_prompt = f"Generate SQLite for: '{user_input}'. Table: Assets (name, quantity, status). Respond ONLY with SQL."
+        sql_prompt = f"Generate SQL for: '{user_input}'. Respond ONLY SQL."
         sql_res = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "system", "content": "Output ONLY raw SQL."}, {"role": "user", "content": sql_prompt}]
         ).choices[0].message.content.strip()
         sql_res = sql_res.replace("```sql", "").replace("```", "").strip()
         db_res = query_db(sql_res)
-        
-        final_prompt = f"Summarize these inventory results: {db_res} for user: {user_input}"
+        final_prompt = f"Summarize results: {db_res} for: {user_input}"
         messages = [{"role": "system", "content": "You are NEXUS, an inventory expert."}]
         messages.extend(history[-6:])
         messages.append({"role": "user", "content": final_prompt})
     else:
-        messages = [{"role": "system", "content": "You are NEXUS, a friendly AI assistant with memory."}]
+        messages = [{"role": "system", "content": "You are NEXUS, a friendly AI assistant."}]
         messages.extend(history[-10:])
         messages.append({"role": "user", "content": user_input})
 
@@ -63,24 +61,29 @@ st.markdown("""
     * { font-family: 'Outfit', sans-serif; }
     .stApp { background: #020617; color: #ffffff !important; }
     
-    .chat-bubble-user { background: #7e22ce; padding: 15px 25px; border-radius: 25px 25px 0 25px; margin-bottom: 20px; margin-left: auto; width: fit-content; max-width: 85%; }
-    .chat-bubble-ai { background: rgba(30, 41, 59, 0.4); border: 1px solid rgba(255,255,255,0.1); padding: 15px 25px; border-radius: 25px 25px 25px 0; margin-bottom: 20px; width: fit-content; max-width: 85%; }
+    /* User Bubble: Purple with White Text */
+    .chat-bubble-user { background: #7e22ce; color: #ffffff; padding: 12px 20px; border-radius: 20px 20px 0 20px; margin-bottom: 20px; margin-left: auto; width: fit-content; max-width: 85%; font-weight: 500; }
     
-    [data-testid="stSidebar"] { background: #0f172a !important; }
-    .stChatInputContainer { border-radius: 30px !important; }
+    /* AI Bubble: Dark Slate with VERY Clear White Text */
+    .chat-bubble-ai { background: #1e293b; color: #f1f5f9 !important; border: 1px solid #334155; padding: 12px 20px; border-radius: 20px 20px 20px 0; margin-bottom: 20px; width: fit-content; max-width: 85%; line-height: 1.6; }
+    
+    /* Integrated Input Bar */
+    .stChatInputContainer { background-color: #0f172a !important; border: 1px solid #1e293b !important; border-radius: 15px !important; }
+    .stChatInputContainer textarea { color: white !important; }
+    
+    [data-testid="stSidebar"] { background: #010409 !important; border-right: 1px solid #1e293b; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("<h1 style='color:#c084fc; font-weight:800;'>NEXUS GOLD</h1>", unsafe_allow_html=True)
-    st.caption("v2.0 | Pure Edition")
+    st.markdown("<h2 style='color:#c084fc; font-weight:800;'>NEXUS GOLD</h2>", unsafe_allow_html=True)
     st.markdown("---")
-    if st.button("🗑️ Clear Chat", use_container_width=True):
+    if st.button("🗑️ Reset Chat", use_container_width=True):
         st.session_state.messages = []; st.rerun()
 
 st.title("⚡ NEXUS GOLD")
-st.caption("Simplified. Powerful. Direct.")
+st.caption("Simplified. Readable. Integrated.")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -90,7 +93,7 @@ for msg in st.session_state.messages:
     cls = "chat-bubble-user" if msg["role"] == "user" else "chat-bubble-ai"
     st.markdown(f"<div class='{cls}'>{msg['content']}</div>", unsafe_allow_html=True)
 
-if prompt := st.chat_input("Ask NEXUS anything..."):
+if prompt := st.chat_input("Message NEXUS..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.markdown(f"<div class='chat-bubble-user'>{prompt}</div>", unsafe_allow_html=True)
 
