@@ -2,7 +2,6 @@ import streamlit as st
 import sys
 import os
 import time
-import json
 
 # Ensure path is correct
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -18,70 +17,95 @@ except ImportError as e:
     st.stop()
 
 # --- Page Config ---
-st.set_page_config(page_title="Nexus Pro | Enterprise AI", page_icon="🏦", layout="wide")
+st.set_page_config(page_title="NEXUS", page_icon="💡", layout="wide")
 
-# --- Advanced Professional CSS ---
+# --- Ultra-Minimalist CSS ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+    
     * { font-family: 'Inter', sans-serif; }
-    .stApp { background-color: #f9fafb; }
-    .main-header {
-        background-color: #ffffff;
-        padding: 20px;
-        border-bottom: 1px solid #e5e7eb;
-        margin-bottom: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+    
+    .stApp { background-color: #ffffff; }
+    
+    /* Sidebar - Very Clean */
+    [data-testid="stSidebar"] {
+        background-color: #f8fafc !important;
+        border-right: 1px solid #e2e8f0 !important;
     }
-    .message-row { display: flex; margin-bottom: 25px; animation: fadeIn 0.3s ease-in-out; }
+    
+    /* NEXUS Header */
+    .nexus-header {
+        font-size: 2.5rem;
+        font-weight: 800;
+        letter-spacing: -2px;
+        color: #0f172a;
+        margin-bottom: 5px;
+    }
+    
+    .nexus-subtitle {
+        color: #64748b;
+        font-size: 0.9rem;
+        margin-bottom: 40px;
+    }
+    
+    /* Chat Bubbles - Elegant & Minimal */
+    .message-row { display: flex; margin-bottom: 20px; }
     .user-row { justify-content: flex-end; }
     .assistant-row { justify-content: flex-start; }
-    .bubble {
-        max-width: 80%;
-        padding: 16px 20px;
-        border-radius: 16px;
-        line-height: 1.6;
-        font-size: 15px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    }
-    .user-bubble { background-color: #2563eb; color: white; border-bottom-right-radius: 4px; }
-    .assistant-bubble { background-color: white; color: #1f2937; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px; }
-    [data-testid="stSidebar"] { background-color: #111827 !important; color: white !important; }
-    .stat-card { background-color: #1f2937; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #374151; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
     
-    /* Subtle Retry Message */
-    .retry-toast {
-        color: #6b7280;
-        font-size: 0.8rem;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+    .bubble {
+        max-width: 75%;
+        padding: 12px 18px;
+        border-radius: 18px;
+        font-size: 15px;
+        line-height: 1.5;
     }
+    
+    .user-bubble {
+        background-color: #0f172a;
+        color: white;
+        border-bottom-right-radius: 2px;
+    }
+    
+    .assistant-bubble {
+        background-color: #f1f5f9;
+        color: #334155;
+        border-bottom-left-radius: 2px;
+    }
+    
+    /* Stats Widget */
+    .stats-box {
+        background: white;
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 20px;
+    }
+    
+    /* Hide Streamlit elements for cleaner look */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
     </style>
     """, unsafe_allow_html=True)
 
-# --- Logic: Fetch Quick Stats ---
+# --- Sidebar Logic ---
 def get_stats():
     try:
         res = execute_query("SELECT COUNT(*) FROM Assets WHERE status = 'Active'")
         return res['data'][0][0]
-    except: return "N/A"
+    except: return "0"
 
-# --- Sidebar ---
 with st.sidebar:
-    st.markdown("<h2 style='color: #60a5fa;'>NEXUS PRO</h2>", unsafe_allow_html=True)
+    st.markdown("<div class='nexus-header'>NEXUS</div>", unsafe_allow_html=True)
+    st.markdown("<div class='nexus-subtitle'>Enterprise Intelligence</div>", unsafe_allow_html=True)
     st.markdown("---")
     bot_type = st.selectbox("Engine", ["Inventory Bot (SQL)", "Knowledge Graph Bot (Neo4j)"])
     st.markdown("---")
-    st.markdown(f"""<div class='stat-card'><p style='color: #9ca3af; margin:0; font-size:0.75rem;'>ACTIVE ASSETS</p><p style='color: #fff; font-size: 1.5rem; font-weight: 700; margin:0;'>{get_stats()}</p></div>""", unsafe_allow_html=True)
-    st.info("🟢 System: Optimal")
+    st.markdown(f"<div class='stats-box'><small style='color:#64748b'>ACTIVE ASSETS</small><br><b>{get_stats()} Items</b></div>", unsafe_allow_html=True)
+    st.caption("🟢 Core: Stable")
 
-# --- Main App ---
-st.markdown("""<div class='main-header'><div><h2 style='margin:0;'>AI Assistant</h2><p style='margin:0; color:#6b7280; font-size:0.9rem;'>Mode: """ + bot_type + """</p></div></div>""", unsafe_allow_html=True)
-
+# --- Main Chat Area ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -89,23 +113,21 @@ if "last_bot" not in st.session_state or st.session_state.last_bot != bot_type:
     st.session_state.messages = []
     st.session_state.last_bot = bot_type
 
-# Chat Display
-chat_placeholder = st.container()
-with chat_placeholder:
-    for message in st.session_state.messages:
-        role_class = "user-row" if message["role"] == "user" else "assistant-row"
-        bubble_class = "user-bubble" if message["role"] == "user" else "assistant-bubble"
-        st.markdown(f"<div class='message-row {role_class}'><div class='bubble {bubble_class}'>{message['content']}</div></div>", unsafe_allow_html=True)
+# Render Messages
+for message in st.session_state.messages:
+    role_class = "user-row" if message["role"] == "user" else "assistant-row"
+    bubble_class = "user-bubble" if message["role"] == "user" else "assistant-bubble"
+    st.markdown(f"<div class='message-row {role_class}'><div class='bubble {bubble_class}'>{message['content']}</div></div>", unsafe_allow_html=True)
 
-# Chat Input
-if prompt := st.chat_input("Enter your request..."):
+# Input
+if prompt := st.chat_input("Message NEXUS..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.rerun()
 
-# Processing
+# Processing Logic
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
     last_prompt = st.session_state.messages[-1]["content"]
-    with st.spinner("AI Processing..."):
+    with st.spinner(" "):
         max_retries = 3
         response = ""
         for i in range(max_retries):
@@ -123,12 +145,10 @@ if st.session_state.messages and st.session_state.messages[-1]["role"] == "user"
                 break
             except Exception as e:
                 if "429" in str(e) and i < max_retries - 1:
-                    wait_time = (i + 1) * 5
-                    st.toast(f"⏳ System busy. Retrying in {wait_time}s...", icon="🔄")
-                    time.sleep(wait_time)
+                    time.sleep((i+1)*5)
                     continue
                 else:
-                    response = "⚠️ The AI service is currently handling high volume. Please wait 30 seconds and try again."
+                    response = "System is currently busy. Please retry in 30 seconds."
         
         st.session_state.messages.append({"role": "assistant", "content": response})
         st.rerun()
