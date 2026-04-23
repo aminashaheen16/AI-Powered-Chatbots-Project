@@ -23,41 +23,46 @@ except ImportError as e:
 # --- Page Config ---
 st.set_page_config(page_title="NEXUS AI", page_icon="🤖", layout="wide")
 
-# --- Futuristic Purple Dark Theme CSS ---
+# --- Refined Deep Purple Theme CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
     * { font-family: 'Outfit', sans-serif; }
-    .stApp { background-color: #000000 !important; color: #ffffff !important; }
-    [data-testid="stSidebar"] { background-color: #0a0a0a !important; border-right: 1px solid #1f1f1f !important; }
-    .brand { font-size: 2.5rem; font-weight: 800; background: linear-gradient(45deg, #a855f7, #6366f1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 30px; text-align: center; }
-    .message-row { display: flex; margin-bottom: 20px; align-items: flex-start; }
-    .user-row { justify-content: flex-end; }
-    .assistant-row { justify-content: flex-start; }
-    .bubble { padding: 15px 20px; border-radius: 20px; font-size: 15px; line-height: 1.5; max-width: 70%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-    .user-bubble { background-color: #9333ea; color: #ffffff; border-bottom-right-radius: 5px; }
-    .assistant-bubble { background-color: #1a1a1a; color: #e5e7eb; border: 1px solid #333333; border-bottom-left-radius: 5px; }
-    .card { background-color: #121212; padding: 20px; border-radius: 20px; border: 1px solid #1f1f1f; text-align: center; transition: 0.3s; }
-    .card:hover { border-color: #9333ea; transform: translateY(-5px); }
-    .stChatInputContainer { border-radius: 30px !important; background-color: #121212 !important; border: 1px solid #333333 !important; }
-    .dot { height: 10px; width: 10px; background-color: #22c55e; border-radius: 50%; display: inline-block; margin-right: 5px; }
+    
+    .stApp { 
+        background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e1b4b 100%) !important;
+        background-attachment: fixed !important;
+        color: #ffffff !important; 
+    }
+    
+    [data-testid="stSidebar"] {
+        background-color: rgba(2, 6, 23, 0.95) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+    }
+    
+    .brand { font-size: 2.5rem; font-weight: 800; background: linear-gradient(45deg, #c084fc, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 30px; text-align: center; }
+    
+    .bubble { padding: 15px 20px; border-radius: 20px; font-size: 15px; line-height: 1.5; max-width: 70%; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+    .user-bubble { background-color: #7e22ce; color: #ffffff; border-bottom-right-radius: 5px; }
+    .assistant-bubble { background-color: #1e293b; color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); border-bottom-left-radius: 5px; }
+    
+    .card { background-color: rgba(30, 41, 59, 0.5); padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); text-align: center; transition: 0.3s; }
+    .card:hover { border-color: #a855f7; background-color: rgba(30, 41, 59, 0.8); }
+    
+    .stChatInputContainer { border-radius: 30px !important; background-color: #1e293b !important; border: 1px solid rgba(255,255,255,0.1) !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- Session & History ---
+# --- Session Management ---
 HISTORY_FILE = os.path.join(current_dir, "data/sessions.json")
-os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
-
 if "sessions" not in st.session_state:
     st.session_state.sessions = {}
     if os.path.exists(HISTORY_FILE):
         try:
             with open(HISTORY_FILE, "r") as f:
                 content = f.read()
-                if content:
-                    st.session_state.sessions = json.loads(content)
-        except Exception:
-            st.session_state.sessions = {}
+                if content: st.session_state.sessions = json.loads(content)
+        except: pass
 
 if "current_session_id" not in st.session_state:
     st.session_state.current_session_id = str(uuid.uuid4())
@@ -66,45 +71,39 @@ if "current_session_id" not in st.session_state:
 # --- Sidebar ---
 with st.sidebar:
     st.markdown("<div class='brand'>NEXUS AI</div>", unsafe_allow_html=True)
-    if st.button("＋ New Conversation", use_container_width=True):
+    if st.button("＋ New Chat", use_container_width=True):
         st.session_state.current_session_id = str(uuid.uuid4())
         st.session_state.sessions[st.session_state.current_session_id] = {"title": "New Session", "messages": [], "bot_type": "Inventory Bot (SQL)"}
         st.rerun()
     st.markdown("---")
-    st.markdown("<p style='color:#666; font-size:0.8rem;'>RECENT CHATS</p>", unsafe_allow_html=True)
-    for sid, data in list(st.session_state.sessions.items())[::-1][:10]:
+    for sid, data in list(st.session_state.sessions.items())[::-1][:8]:
         if st.button(data["title"], key=sid, use_container_width=True):
             st.session_state.current_session_id = sid
             st.rerun()
 
 # --- Main App ---
-st.markdown("<div style='display:flex; justify-content:space-between; align-items:center;'><h3>Explore Engine</h3><p><span class='dot'></span>System Active</p></div>", unsafe_allow_html=True)
+st.markdown("<div style='display:flex; justify-content:space-between;'><h3>Insights Dashboard</h3><p>🟢 Active Engine</p></div>", unsafe_allow_html=True)
 col1, col2, col3, col4 = st.columns(4)
-with col1: st.markdown("<div class='card'><div class='card-icon'>📦</div><b>Inventory</b><br><small>SQL Expert</small></div>", unsafe_allow_html=True)
-with col2: st.markdown("<div class='card'><div class='card-icon'>🕸️</div><b>Knowledge</b><br><small>Neo4j Graph</small></div>", unsafe_allow_html=True)
-with col3: st.markdown("<div class='card'><div class='card-icon'>📊</div><b>Analytics</b><br><small>Data Insights</small></div>", unsafe_allow_html=True)
-with col4: st.markdown("<div class='card'><div class='card-icon'>⚙️</div><b>Settings</b><br><small>AI Tuning</small></div>", unsafe_allow_html=True)
+with col1: st.markdown("<div class='card'>📦<br><b>Inventory</b></div>", unsafe_allow_html=True)
+with col2: st.markdown("<div class='card'>🕸️<br><b>Knowledge</b></div>", unsafe_allow_html=True)
+with col3: st.markdown("<div class='card'>📊<br><b>Analytics</b></div>", unsafe_allow_html=True)
+with col4: st.markdown("<div class='card'>⚙️<br><b>Settings</b></div>", unsafe_allow_html=True)
 st.markdown("---")
 
 current_session = st.session_state.sessions[st.session_state.current_session_id]
-bot_type = st.selectbox("Select Active Protocol", ["Inventory Bot (SQL)", "Knowledge Graph Bot (Neo4j)"])
+bot_type = st.selectbox("Protocol", ["Inventory Bot (SQL)", "Knowledge Graph Bot (Neo4j)"])
 current_session["bot_type"] = bot_type
 
-# Chat Display
-chat_placeholder = st.container()
-with chat_placeholder:
-    for msg in current_session["messages"]:
-        row_class = "user-row" if msg["role"] == "user" else "assistant-row"
-        bubble_class = "user-bubble" if msg["role"] == "user" else "assistant-bubble"
-        st.markdown(f"<div class='message-row {row_class}'><div class='bubble {bubble_class}'>{msg['content']}</div></div>", unsafe_allow_html=True)
+for msg in current_session["messages"]:
+    align = "justify-content: flex-end" if msg["role"] == "user" else "justify-content: flex-start"
+    bubble = "user-bubble" if msg["role"] == "user" else "assistant-bubble"
+    st.markdown(f"<div style='display:flex; {align}; margin-bottom:20px;'><div class='bubble {bubble}'>{msg['content']}</div></div>", unsafe_allow_html=True)
 
-# Input
-if prompt := st.chat_input("Ask anything..."):
+if prompt := st.chat_input("Enter message..."):
     if current_session["title"] == "New Session": current_session["title"] = prompt[:25]
     current_session["messages"].append({"role": "user", "content": prompt})
     st.rerun()
 
-# Response Logic
 if current_session["messages"] and current_session["messages"][-1]["role"] == "user":
     with st.spinner(" "):
         try:
@@ -116,16 +115,14 @@ if current_session["messages"] and current_session["messages"][-1]["role"] == "u
                 agent = KnowledgeAgent(); response = agent.handle_message(prompt)
             
             full_res = ""
-            msg_placeholder = st.empty()
+            ph = st.empty()
             for chunk in response.split(" "):
                 full_res += chunk + " "
-                msg_placeholder.markdown(f"<div class='message-row assistant-row'><div class='bubble assistant-bubble'>{full_res}▌</div></div>", unsafe_allow_html=True)
+                ph.markdown(f"<div style='display:flex; justify-content:flex-start; margin-bottom:20px;'><div class='bubble assistant-bubble'>{full_res}▌</div></div>", unsafe_allow_html=True)
                 time.sleep(0.04)
-            msg_placeholder.markdown(f"<div class='message-row assistant-row'><div class='bubble assistant-bubble'>{full_res}</div></div>", unsafe_allow_html=True)
+            ph.markdown(f"<div style='display:flex; justify-content:flex-start; margin-bottom:20px;'><div class='bubble assistant-bubble'>{full_res}</div></div>", unsafe_allow_html=True)
             
             current_session["messages"].append({"role": "assistant", "content": full_res})
             with open(HISTORY_FILE, "w") as f: json.dump(st.session_state.sessions, f, indent=4)
             st.rerun()
-        except Exception as e:
-            if "429" in str(e): st.toast("⏳ Service busy, retrying...", icon="⚠️")
-            else: st.error(f"Error: {e}")
+        except Exception as e: st.error(f"Error: {e}")
