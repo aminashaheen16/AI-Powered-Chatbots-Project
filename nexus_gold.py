@@ -53,37 +53,48 @@ def nex_ai_core(user_input, history):
     return client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages, stream=True)
 
 # --- UI SETUP ---
-st.set_page_config(page_title="NEXUS GOLD", page_icon="⚡", layout="centered")
+st.set_page_config(page_title="NEXUS GOLD", page_icon="⚡", layout="wide")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap');
     * { font-family: 'Outfit', sans-serif; }
-    .stApp { background: #020617; color: #ffffff !important; }
+    .stApp { background: #020617 !important; color: #ffffff !important; }
     
-    /* User Bubble: Purple with White Text */
-    .chat-bubble-user { background: #7e22ce; color: #ffffff; padding: 12px 20px; border-radius: 20px 20px 0 20px; margin-bottom: 20px; margin-left: auto; width: fit-content; max-width: 85%; font-weight: 500; }
+    /* Header styling - Left Aligned */
+    .header-container { display: flex; align-items: center; justify-content: flex-start; padding: 20px 0; margin-bottom: 30px; }
+    .header-logo { font-size: 2.2rem; font-weight: 800; color: #ffffff; letter-spacing: -1px; }
+    .header-logo span { color: #c084fc; }
     
-    /* AI Bubble: Dark Slate with VERY Clear White Text */
-    .chat-bubble-ai { background: #1e293b; color: #f1f5f9 !important; border: 1px solid #334155; padding: 12px 20px; border-radius: 20px 20px 20px 0; margin-bottom: 20px; width: fit-content; max-width: 85%; line-height: 1.6; }
+    /* Chat bubbles */
+    .chat-bubble-user { background: #7e22ce; color: #ffffff; padding: 15px 25px; border-radius: 25px 25px 0 25px; margin-bottom: 20px; margin-left: auto; width: fit-content; max-width: 80%; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    .chat-bubble-ai { background: #1e293b; color: #f1f5f9; border: 1px solid rgba(255,255,255,0.05); padding: 15px 25px; border-radius: 25px 25px 25px 0; margin-bottom: 20px; width: fit-content; max-width: 80%; line-height: 1.6; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
     
-    /* Integrated Input Bar */
-    .stChatInputContainer { background-color: #0f172a !important; border: 1px solid #1e293b !important; border-radius: 15px !important; }
-    .stChatInputContainer textarea { color: white !important; }
+    /* Input Bar - Matching Chat Background (Navy/Dark Blue) */
+    .stChatInputContainer { background-color: #020617 !important; border: 1px solid #1e293b !important; border-radius: 20px !important; margin-bottom: 20px !important; }
+    .stChatInputContainer textarea { background-color: transparent !important; color: white !important; font-size: 1rem !important; }
     
+    /* Sidebar */
     [data-testid="stSidebar"] { background: #010409 !important; border-right: 1px solid #1e293b; }
+    
+    /* Hide default Streamlit header for cleaner look */
+    header { visibility: hidden; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("<h2 style='color:#c084fc; font-weight:800;'>NEXUS GOLD</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#c084fc; font-weight:800; margin-top:20px;'>NEXUS PRO</h2>", unsafe_allow_html=True)
     st.markdown("---")
     if st.button("🗑️ Reset Chat", use_container_width=True):
         st.session_state.messages = []; st.rerun()
 
-st.title("⚡ NEXUS GOLD")
-st.caption("Simplified. Readable. Integrated.")
+# --- HEADER (Left Aligned as requested) ---
+st.markdown("""
+    <div class='header-container'>
+        <div class='header-logo'>⚡ <span>NEXUS</span> GOLD</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
