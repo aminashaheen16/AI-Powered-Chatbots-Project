@@ -12,29 +12,29 @@ class LLMClient:
             raise ValueError("GROQ_API_KEY not found in environment variables.")
         self.client = Groq(api_key=api_key)
         self.model = model_name
+        self.system_prompt = "You are NEXUS, a friendly, professional, and intelligent AI Assistant. Always respond naturally and helpfully to the user. Never say you have no greeting to respond to."
 
     def generate(self, prompt, system_instruction=None):
-        messages = []
-        if system_instruction:
-            messages.append({"role": "system", "content": system_instruction})
-        messages.append({"role": "user", "content": prompt})
+        sys_msg = system_instruction if system_instruction else self.system_prompt
+        messages = [
+            {"role": "system", "content": sys_msg},
+            {"role": "user", "content": prompt}
+        ]
         
         completion = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
-            temperature=0.7,
+            temperature=0.8,
             max_tokens=1024,
-            top_p=1,
-            stream=False,
-            stop=None,
         )
         return completion.choices[0].message.content.strip()
 
     def generate_stream(self, prompt, system_instruction=None):
-        messages = []
-        if system_instruction:
-            messages.append({"role": "system", "content": system_instruction})
-        messages.append({"role": "user", "content": prompt})
+        sys_msg = system_instruction if system_instruction else self.system_prompt
+        messages = [
+            {"role": "system", "content": sys_msg},
+            {"role": "user", "content": prompt}
+        ]
         
         completion = self.client.chat.completions.create(
             model=self.model,
@@ -46,5 +46,14 @@ class LLMClient:
                 yield chunk.choices[0].delta.content
 
     def generate_json(self, prompt, system_instruction=None):
-        res = self.generate(prompt + "\n\nRespond ONLY with a valid JSON object.", system_instruction)
-        return res
+        # When generating JSON, we need to be strict
+        messages = [
+            {"role": "system", "content": "You are a JSON assistant. Respond ONLY with valid JSON. No prose."},
+            {"role": "user", "content": prompt}
+        ]
+        completion = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            response_format={"type": "json_object"}
+        )
+        return completion.choices[0].message.content.strip()
