@@ -13,7 +13,7 @@ class LLMClient:
         self.client = Groq(api_key=api_key)
         self.model = model_name
 
-    def generate(self, prompt, system_instruction="You are NEXUS, a helpful AI assistant."):
+    def generate(self, prompt, system_instruction="You are NEXUS, a world-class AI Expert. Answer all questions directly, thoroughly, and professionally. Do not ask for permission to help, just provide the information."):
         messages = [
             {"role": "system", "content": system_instruction},
             {"role": "user", "content": str(prompt)}
@@ -25,7 +25,7 @@ class LLMClient:
         )
         return completion.choices[0].message.content.strip()
 
-    def generate_stream(self, prompt, system_instruction="You are NEXUS, a helpful AI assistant."):
+    def generate_stream(self, prompt, system_instruction="You are NEXUS, a world-class AI Expert. Answer all questions directly, thoroughly, and professionally. Do not ask for permission to help, just provide the information."):
         messages = [
             {"role": "system", "content": system_instruction},
             {"role": "user", "content": str(prompt)}
@@ -41,7 +41,7 @@ class LLMClient:
 
     def generate_json(self, prompt):
         messages = [
-            {"role": "system", "content": "You are a JSON assistant. Respond ONLY with valid JSON."},
+            {"role": "system", "content": "You are a JSON assistant. Respond ONLY with valid JSON. No prose."},
             {"role": "user", "content": str(prompt)}
         ]
         completion = self.client.chat.completions.create(
