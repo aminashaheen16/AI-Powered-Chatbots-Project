@@ -18,6 +18,13 @@ class LLMClient:
         response = self.model.generate_content(full_prompt)
         return response.text.strip()
 
+    def generate_stream(self, prompt, system_instruction=None):
+        full_prompt = f"{system_instruction}\n\nUser: {prompt}" if system_instruction else prompt
+        response = self.model.generate_content(full_prompt, stream=True)
+        for chunk in response:
+            if chunk.text:
+                yield chunk.text
+
     def generate_json(self, prompt, system_instruction=None):
         json_prompt = f"{prompt}\n\nRespond ONLY with a valid JSON object. Do not include markdown formatting like ```json."
         full_prompt = f"{system_instruction}\n\n{json_prompt}" if system_instruction else json_prompt
