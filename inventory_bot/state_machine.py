@@ -17,57 +17,52 @@ class AgentState(TypedDict):
 
 llm = LLMClient()
 
-def intent_classifier(state: AgentState):
-    prompt = f"Identify if the user wants to 'query' the inventory database or just 'chitchat'. User Input: {state['user_input']}. Respond in JSON format: {{\"intent\": \"query\" or \"chitchat\"}}"
-    res = llm.generate_json(prompt)
+def main_agent(state: AgentState):
+    # Determine if it's a database query or general chat
+    prompt = f"Decide if this user request needs a database query about inventory/assets: '{state['user_input']}'. Respond in JSON: {{\"needs_db\": true/false}}"
+    decision = llm.generate_json(prompt)
     try:
-        intent_data = json.loads(res)
-        return {**state, "intent": intent_data.get('intent', 'chitchat')}
+        needs_db = json.loads(decision).get('needs_db', False)
     except:
-        return {**state, "intent": "chitchat"}
+        needs_db = False
+        
+    if not needs_db:
+        # Direct response for general chat
+        res = llm.generate(state['user_input'])
+        return {**state, "response": res, "intent": "chitchat"}
+    else:
+        # Proceed to SQL generation
+        return {**state, "intent": "query"}
 
 def sql_generator(state: AgentState):
-    schema = """
-    Tables: Assets (id, name, quantity, status, category_id, vendor_id, location_id)
-    """
-    prompt = f"Generate a SQLite query for: {state['user_input']}. Schema: {schema}. Respond ONLY with SQL."
-    query = llm.generate(prompt, system_instruction="You are a SQL generator. Output ONLY raw SQL code.")
-    query = query.replace("```sql", "").replace("```", "").strip()
-    return {**state, "sql_query": query}
+    if state['intent'] == 'chitchat': return state
+    schema = "Table: Assets (name, quantity, status, category_id, vendor_id, location_id)"
+    prompt = f"Generate SQL for: {state['user_input']}. Schema: {schema}"
+    query = llm.generate(prompt, system_instruction="Output ONLY raw SQL.")
+    return {**state, "sql_query": query.strip()}
 
 def sql_executor(state: AgentState):
+    if state['intent'] == 'chitchat': return state
     res = execute_query(state['sql_query'])
-    if "error" in res: return {**state, "error": res['error'], "query_results": None}
-    return {**state, "query_results": res, "error": ""}
-
-def sql_corrector(state: AgentState):
-    if not state['error'] or state['retry_count'] >= 2: return state
-    prompt = f"Fix this SQL: {state['sql_query']}. Error: {state['error']}."
-    corrected = llm.generate(prompt, system_instruction="Fix SQL errors and output ONLY the corrected SQL.")
-    return {**state, "sql_query": corrected.strip(), "retry_count": state['retry_count'] + 1}
+    return {**state, "query_results": res, "error": res.get('error', "")}
 
 def responder(state: AgentState):
-    if state['intent'] == 'chitchat':
-        res = llm.generate(state['user_input'])
-    elif state['error']:
-        res = f"I couldn't find that in the database. Error: {state['error']}"
-    else:
-        prompt = f"Summarize these inventory results for the user: {json.dumps(state['query_results'])}. User asked: {state['user_input']}"
-        res = llm.generate(prompt)
-    
+    if state['intent'] == 'chitchat': return state
+    prompt = f"Summarize inventory data: {json.dumps(state['query_results'])} for request: {state['user_input']}"
+    res = llm.generate(prompt)
     return {**state, "response": res}
 
-# Graph setup
+# Simple Graph
 workflow = StateGraph(AgentState)
-workflow.add_node("intent", intent_classifier); workflow.add_node("generator", sql_generator)
-workflow.add_node("executor", sql_executor); workflow.add_node("corrector", sql_corrector)
+workflow.add_node("agent", main_agent)
+workflow.add_node("generator", sql_generator)
+workflow.add_node("executor", sql_executor)
 workflow.add_node("responder", responder)
 
-workflow.set_entry_point("intent")
-workflow.add_conditional_edges("intent", lambda x: "responder" if x['intent'] == 'chitchat' else "generator")
+workflow.set_entry_point("agent")
+workflow.add_conditional_edges("agent", lambda x: "generator" if x['intent'] == "query" else "responder")
 workflow.add_edge("generator", "executor")
-workflow.add_conditional_edges("executor", lambda x: "corrector" if x['error'] and x['retry_count'] < 2 else "responder")
-workflow.add_edge("corrector", "executor")
+workflow.add_edge("executor", "responder")
 workflow.add_edge("responder", END)
 
 inventory_app = workflow.compile()
