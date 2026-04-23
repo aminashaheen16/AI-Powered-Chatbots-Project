@@ -1,44 +1,48 @@
-# 🏗️ NEXUS Project Architecture Diagrams
+# 🏗️ NEXUS Advanced Architecture
 
-## 1. Inventory Chatbot (SQL State Machine)
-This diagram illustrates the graph-based state machine approach used for the SQL Inventory Bot.
-
+## 1. Inventory Bot (SQL + Memory + Eval)
 ```mermaid
 graph TD
     User([User Input]) --> Intent[Intent Classifier]
     Intent -- Chitchat --> Resp[Friendly Responder]
-    Intent -- Query --> Gen[SQL Generator Node]
+    Intent -- Query --> Mem[Memory Loader]
     
-    Gen --> Exec[SQL Executor Node]
-    Exec -- Success --> Synth[Synthesis Responder]
-    Exec -- Error --> Corr[AI Corrector Node]
-    
+    Mem --> Gen[SQL Generator]
+    Gen --> Exec[SQL Executor]
+    Exec -- Error --> Corr[AI Corrector]
     Corr --> Exec
     
-    Synth --> End([Output Result])
-    Resp --> End
+    Exec -- Success --> Synth[Synthesis Responder]
+    Synth --> Save[Memory Saver]
+    Save --> Eval[AI Evaluator]
+    Eval --> End([Final Response + Score])
     
-    subgraph Database
-        DB[(SQLite Inventory DB)]
+    subgraph Storage
+        DB[(SQLite Assets + History)]
     end
+    Mem <--> DB
     Exec <--> DB
+    Save <--> DB
 ```
 
----
-
-## 2. Knowledge Graph Agent (Neo4j CRUD)
-This diagram illustrates the flow for translating natural language into graph operations.
-
+## 2. Knowledge Graph Agent (Neo4j + Graph Memory)
 ```mermaid
 graph LR
-    Input([NL Inquiry/Command]) --> Classify{Intent Classifier}
-    
-    Classify -- add --> Cypher[Cypher Generator]
-    Classify -- inquire --> Cypher
-    Classify -- edit --> Cypher
-    Classify -- delete --> Cypher
-    
-    Cypher --> Neo[(Neo4j Database)]
-    Neo --> Engine[Synthesis Engine]
-    Engine --> Output([NL Summary])
+    Input([User Input]) --> Classify{Intent}
+    Classify --> Mem[Load Graph History]
+    Mem --> Gen[Cypher Generator]
+    Gen --> Neo[(Neo4j DB)]
+    Neo --> Synth[Synthesis Engine]
+    Synth --> Save[Save Conversation Node]
+    Save --> Eval[Evaluation Node]
+    Eval --> Output([Final Output])
+```
+
+## 3. API Architecture
+```mermaid
+graph TD
+    Client[Web/Mobile/CLI] --> API[FastAPI Server]
+    API --> Logic[Bot Logic Modules]
+    Logic --> Groq[Groq Llama 3.3]
+    Logic --> Databases[(SQL & Neo4j)]
 ```

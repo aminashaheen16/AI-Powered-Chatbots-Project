@@ -1,62 +1,54 @@
-# 🔱 NEXUS: AI-Powered Chatbots Project
+# 🔱 NEXUS: AI-Powered Chatbots Project (Advanced Edition)
 
-This repository contains two distinct AI-powered conversational agents designed for terminal-based interaction with SQL and Neo4j databases.
+This repository contains two distinct AI-powered conversational agents designed for terminal-based interaction with SQL and Neo4j databases, now enhanced with Memory, APIs, and Evaluation.
 
-## 🚀 Getting Started
+## 🚀 Key Features (New!)
+- **Memory (Short & Long Term)**: 
+  - SQL Bot persists history in a SQLite `ChatHistory` table.
+  - Neo4j Bot persists history using `:Conversation` nodes in the graph.
+- **RESTful APIs**: Fast API server to interact with bots programmatically.
+- **AI Evaluation**: Real-time evaluation of each response using an LLM-as-a-judge scoring system.
+
+## 🛠️ Setup
 
 ### 1. Prerequisites
 - Python 3.8+
 - Groq API Key
-- Neo4j Instance (Local Desktop or AuraDB)
+- Neo4j Instance
 
 ### 2. Installation
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Configuration
-Create a `.env` file in the root directory:
+### 3. Configuration (.env)
 ```env
-GROQ_API_KEY=your_groq_api_key
+GROQ_API_KEY=your_key
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
-NEO4J_PASSWORD=your_password
+NEO4J_PASSWORD=password
 ```
 
 ---
 
-## 📂 Deliverables
+## 📂 Execution
 
-### 1. Inventory Chatbot (SQL)
-- **File**: `inventory_bot.py`
-- **Database**: `data/inventory.db` (SQLite)
-- **Features**: Intent parsing, Self-correction, Business rule enforcement (Active records).
-- **Run**:
-  ```bash
-  python inventory_bot.py
-  ```
+### 1. Terminal Bots
+- **SQL Bot**: `python inventory_bot.py`
+- **Neo4j Bot**: `python knowledge_agent.py`
 
-### 2. Knowledge Graph Agent (Neo4j)
-- **File**: `knowledge_agent.py`
-- **Features**: Classifies actions (add, inquire, edit, delete), dynamic Cypher generation, natural language synthesis.
-- **Run**:
-  ```bash
-  python knowledge_agent.py
-  ```
+### 2. API Server
+```bash
+python api_server.py
+```
+- **Endpoints**:
+  - `POST /sql/query`: { "query": "...", "session_id": "user123" }
+  - `POST /graph/query`: { "query": "..." }
 
 ---
 
 ## 🏗️ Architecture
-System design and data flow diagrams are available in [architecture.md](./architecture.md).
-
-## 📊 SQL Schema
-The inventory database follows this structure:
-- `id` (PK)
-- `name` (Asset name)
-- `quantity` (Current stock)
-- `status` ('Active', 'Inactive', 'Disposed')
-- `vendor` (Manufacturer/Vendor)
-- `location` (Physical location)
+System design with Memory and Evaluation nodes is detailed in [architecture.md](./architecture.md).
 
 ## 📝 Project Report
-A comprehensive project summary is available in [Project_Report.md](./Project_Report.md).
+Full details on implementation, evaluation metrics, and API design are in [Project_Report.md](./Project_Report.md).

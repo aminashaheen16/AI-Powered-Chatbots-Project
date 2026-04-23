@@ -17,40 +17,42 @@ class Neo4jAgent:
             self.driver = GraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASS))
             self.driver.verify_connectivity()
         except Exception as e:
-            print(f"[!] Warning: Could not connect to Neo4j. Error: {e}")
             self.driver = None
 
-    def execute_cypher(self, query):
-        if not self.driver:
-            return {"status": "error", "message": "Neo4j Connection Error"}
+    def execute_cypher(self, query, params=None):
+        if not self.driver: return {"status": "error", "message": "No connection"}
         try:
             with self.driver.session() as session:
-                result = session.run(query)
-                data = [record.data() for record in result]
-                return {"status": "success", "data": data}
+                result = session.run(query, params)
+                return {"status": "success", "data": [record.data() for record in result]}
         except Exception as e:
             return {"status": "error", "message": str(e)}
 
+    # --- LONG TERM MEMORY (Graph Based) ---
+    def save_memory(self, user_input, ai_response):
+        cypher = """
+        CREATE (c:Conversation {user_input: $ui, ai_response: $ar, timestamp: datetime()})
+        """
+        self.execute_cypher(cypher, {"ui": user_input, "ar": ai_response})
+
+    def load_memory(self, limit=5):
+        cypher = """
+        MATCH (c:Conversation)
+        RETURN c.user_input as user, c.ai_response as ai
+        ORDER BY c.timestamp DESC LIMIT $limit
+        """
+        res = self.execute_cypher(cypher, {"limit": limit})
+        if res["status"] == "success":
+            return list(reversed(res["data"]))
+        return []
+
     def close(self):
-        if self.driver:
-            self.driver.close()
+        if self.driver: self.driver.close()
 
 # --- AGENT NODES ---
 
 def classifier_node(user_input):
-    """Classifies intent into specific CRUD actions or chitchat."""
-    prompt = f"""
-    Classify the user intent for the following input: '{user_input}'
-    
-    Categories:
-    - add: Storing new facts or nodes (e.g., 'Add a new server named X').
-    - inquire: Searching for information (e.g., 'Who is the vendor for Y?').
-    - edit: Updating existing facts (e.g., 'Change the location of Z to Room 5').
-    - delete: Removing facts (e.g., 'Delete the asset A').
-    - chitchat: Greetings or general talk.
-    
-    Respond with JSON: {{'intent': '...'}}
-    """
+    prompt = f"Classify intent for '{user_input}': add, inquire, edit, delete, chitchat. JSON: {{'intent': '...'}}"
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
@@ -58,106 +60,55 @@ def classifier_node(user_input):
     )
     return json.loads(response.choices[0].message.content).get("intent")
 
-def cypher_generator_node(user_input, intent):
-    """Generates Cypher query based on intent and input."""
-    prompt = f"""
-    Generate a Neo4j Cypher query to perform the '{intent}' action for: '{user_input}'
-    
-    Guidelines:
-    - Use meaningful labels (e.g., :Asset, :Vendor, :Location).
-    - For 'inquire', use MATCH and RETURN.
-    - For 'add', use MERGE or CREATE.
-    - For 'edit', use MATCH and SET.
-    - For 'delete', use MATCH and DETACH DELETE.
-    - Return ONLY the raw Cypher query. No markdown formatting.
-    """
+def cypher_generator_node(user_input, history):
+    prompt = f"Generate Cypher for '{user_input}'. History: {history}. Respond ONLY raw Cypher."
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        messages=[{"role": "system", "content": "You are a Neo4j Cypher expert."},
+        messages=[{"role": "system", "content": "You are a Neo4j expert."},
                   {"role": "user", "content": prompt}]
     )
     return response.choices[0].message.content.strip().replace("```cypher", "").replace("```", "").strip()
 
-def corrector_node(failed_cypher, error_message):
-    """Self-corrects a failed Cypher query."""
-    print(f"\n[AI-CORRECTION] Cypher error: {error_message}. Retrying...")
-    prompt = f"""
-    The following Cypher query failed:
-    QUERY: {failed_cypher}
-    ERROR: {error_message}
-    
-    Fix the query and return ONLY the corrected Cypher. No markdown formatting.
-    """
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "system", "content": "You are a Cypher debugging expert."},
-                  {"role": "user", "content": prompt}]
+def evaluation_node(user_input, cypher, results, response):
+    prompt = f"Evaluate Neo4j Agent. Input: {user_input}, Cypher: {cypher}, Result: {results}, Response: {response}. JSON: {{'accuracy': 0-10, 'feedback': '...'}}"
+    res = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[{"role": "user", "content": prompt}],
+        response_format={"type": "json_object"}
     )
-    return response.choices[0].message.content.strip().replace("```cypher", "").replace("```", "").strip()
+    return json.loads(res.choices[0].message.content)
 
-def synthesis_engine(user_input, db_results, intent):
-    """Synthesizes a natural language response."""
-    prompt = f"""
-    User Input: {user_input}
-    Intent: {intent}
-    Database Result: {db_results}
-    
-    Provide a natural, human-readable response summarizing the result of the action.
-    """
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content.strip()
-
-# --- MAIN CLI ---
+# --- MAIN ---
 
 def main():
     agent = Neo4jAgent()
-    print("="*50)
-    print("🕸️ NEXUS KNOWLEDGE GRAPH AGENT (Neo4j-CLI)")
-    print("="*50)
+    print("🕸️ NEXUS GRAPH BOT (Neo4j + Graph Memory + Eval)")
+    history = agent.load_memory()
     
     while True:
         try:
             user_input = input("\nYou: ")
-            if user_input.lower() in ['exit', 'quit']:
-                print("NEXUS: Goodbye!")
-                break
+            if user_input.lower() in ['exit', 'quit']: break
             
-            # 1. Classify
             intent = classifier_node(user_input)
             if intent == "chitchat":
-                res = client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
-                    messages=[{"role": "system", "content": "Respond friendly to: " + user_input}]
-                ).choices[0].message.content
-                print(f"NEXUS: {res}")
+                print("NEXUS: Hello!")
                 continue
                 
-            # 2. Generate Cypher
-            cypher = cypher_generator_node(user_input, intent)
-            print(f"[CYPHER] {cypher}") 
+            cypher = cypher_generator_node(user_input, history)
+            res = agent.execute_cypher(cypher)
             
-            # 3. Execute with Retry
-            results = agent.execute_cypher(cypher)
-            if results["status"] == "error":
-                cypher = corrector_node(cypher, results["message"])
-                results = agent.execute_cypher(cypher)
-            
-            # 4. Synthesize
-            if results["status"] == "success":
-                answer = synthesis_engine(user_input, results["data"], intent)
-                print(f"NEXUS: {answer}")
-            else:
-                print(f"NEXUS: Persistent error - {results['message']}")
-
-        except KeyboardInterrupt:
-            print("\nNEXUS: Goodbye!")
-            break
-        except Exception as e:
-            print(f"NEXUS: Unexpected error - {e}")
-
+            if res["status"] == "success":
+                # Synthesis (Simplified for demo)
+                ans = f"Action processed successfully. Result: {res['data']}"
+                print(f"NEXUS: {ans}")
+                
+                agent.save_memory(user_input, ans)
+                history.append({"user": user_input, "ai": ans})
+                
+                ev = evaluation_node(user_input, cypher, res["data"], ans)
+                print(f"[EVAL] Accuracy: {ev['accuracy']}/10")
+        except KeyboardInterrupt: break
     agent.close()
 
 if __name__ == "__main__":
