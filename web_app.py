@@ -15,111 +15,115 @@ except ImportError as e:
     st.stop()
 
 # --- Page Config ---
-st.set_page_config(page_title="Nexus AI | Chatbot Suite", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="Nexus AI | Futuristic Suite", page_icon="💎", layout="wide")
 
-# --- Custom CSS for Premium Look ---
+# --- Glassmorphism CSS ---
 st.markdown("""
     <style>
-    /* Main Background */
-    .stApp {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        color: #f8fafc;
-    }
-    
-    /* Sidebar styling */
-    section[data-testid="stSidebar"] {
-        background-color: #020617 !important;
-        border-right: 1px solid #334155;
-    }
-    
-    /* Chat message styling */
-    .stChatMessage {
-        border-radius: 15px;
-        padding: 15px;
-        margin-bottom: 10px;
-        border: 1px solid #334155;
-    }
-    
-    /* User message */
-    div[data-testid="stChatMessage"]:nth-child(even) {
-        background-color: #1e293b;
-    }
-    
-    /* Assistant message */
-    div[data-testid="stChatMessage"]:nth-child(odd) {
-        background-color: #0f172a;
-        border-left: 5px solid #3b82f6;
-    }
-    
-    /* Titles and Headers */
-    h1 {
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
+
+    html, body, [data-testid="stAppViewContainer"] {
         font-family: 'Inter', sans-serif;
-        font-weight: 800;
-        letter-spacing: -1px;
-        background: -webkit-linear-gradient(#3b82f6, #2dd4bf);
+        background: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80');
+        background-size: cover;
+        background-attachment: fixed;
+    }
+
+    .stApp {
+        background: rgba(15, 23, 42, 0.7); /* Overlay to make text readable */
+    }
+
+    /* Glassmorphism containers */
+    div[data-testid="stChatMessage"] {
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(10px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 20px !important;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+        margin: 15px 0 !important;
+    }
+
+    /* Sidebar Glassmorphism */
+    section[data-testid="stSidebar"] {
+        background: rgba(2, 6, 23, 0.8) !important;
+        backdrop-filter: blur(15px) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* Titles */
+    h1 {
+        font-size: 3rem !important;
+        font-weight: 800 !important;
+        background: linear-gradient(to right, #00f2fe, #4facfe);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        text-shadow: 0px 10px 20px rgba(0,0,0,0.2);
     }
-    
-    /* Input Box */
+
+    /* Chat Input */
     .stChatInputContainer {
-        border-radius: 20px;
-        border: 1px solid #3b82f6;
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(10px) !important;
+        border-radius: 30px !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
     }
-    
-    /* Sidebar text */
-    .css-17l2qt2 {
-        color: #94a3b8;
+
+    /* Buttons and Selectbox */
+    .stSelectbox div[data-baseweb="select"] {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border-radius: 10px !important;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .stChatMessage {
+        animation: fadeIn 0.5s ease-out;
     }
     </style>
     """, unsafe_allow_html=True)
 
 # --- Sidebar ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2040/2040504.png", width=80)
-    st.title("Nexus AI")
+    st.markdown("<div style='text-align: center;'><img src='https://cdn-icons-png.flaticon.com/512/2040/2040504.png' width='100'></div>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; font-size: 2rem !important;'>NEXUS</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #94a3b8;'>Quantum Chat Engine v3.0</p>", unsafe_allow_html=True)
     st.markdown("---")
-    bot_type = st.selectbox("Select Active Engine", ["Inventory Bot (SQL)", "Knowledge Graph Bot (Neo4j)"])
+    bot_type = st.selectbox("Switch Core Engine", ["Inventory Bot (SQL)", "Knowledge Graph Bot (Neo4j)"])
     st.markdown("---")
-    st.info("⚡ **System Status**: Online")
-    st.caption("Powered by Gemini 1.5 Flash")
+    st.markdown("🟢 **Engine Status**: Optimized")
+    st.markdown("🧠 **Memory**: Active (Long-Term)")
 
 # --- Main App ---
-st.title("⚡ Nexus AI Chatbot Suite")
-st.subheader(f"Interface: {bot_type}")
+st.title("💎 Nexus AI Suite")
+st.markdown(f"**Current Protocol:** {bot_type}")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Clear history when switching bots
 if "last_bot" not in st.session_state or st.session_state.last_bot != bot_type:
     st.session_state.messages = []
     st.session_state.last_bot = bot_type
 
-# Display chat history
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Chat input
-if prompt := st.chat_input("Enter your query here..."):
+if prompt := st.chat_input("Initiate query..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("Processing through AI Engine..."):
+        with st.spinner("Analyzing data through quantum neural nodes..."):
             try:
                 if bot_type == "Inventory Bot (SQL)":
                     result = inventory_app.invoke({
-                        "user_input": prompt,
-                        "intent": "",
-                        "sql_query": "",
-                        "query_results": None,
-                        "error": "",
-                        "history": [],
-                        "response": "",
-                        "retry_count": 0
+                        "user_input": prompt, "intent": "", "sql_query": "",
+                        "query_results": None, "error": "", "history": [],
+                        "response": "", "retry_count": 0
                     })
                     response = result["response"]
                 else:
@@ -129,8 +133,7 @@ if prompt := st.chat_input("Enter your query here..."):
                 st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
             except Exception as e:
-                st.error(f"Engine Error: {e}")
+                st.error(f"Execution Error: {e}")
 
-# Footer
 st.markdown("---")
-st.caption("© 2026 AI-Powered Chatbots Project | Advanced Agentic Coding")
+st.markdown("<p style='text-align: center; opacity: 0.5;'>NEXUS AI © 2026 | Next-Gen AI Interfaces</p>", unsafe_allow_html=True)
